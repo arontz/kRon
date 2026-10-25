@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>kRon</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  body { display: flex; align-items: center; justify-content: flex-end; }
+  #pill {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--line);
+    transition: background 150ms ease;
+    white-space: nowrap;
+  }
+  body.open #pill { background: rgba(255, 255, 255, 0.12); }
+  .mode { display: none; align-items: center; gap: 2px; }
+  body[data-page="music"] #music, body[data-page="system"] #system { display: flex; }
+
+  #art { width: 30px; height: 30px; border-radius: 7px; margin: 0 6px 0 2px; }
+  .meta { display: flex; flex-direction: column; width: 132px; margin-right: 4px; line-height: 1.25; }
+  .meta .t { font-size: 12px; font-weight: 600; }
+  .meta .a { font-size: 11px; color: var(--text-2); }
+  .ctl { width: 32px; height: 32px; }
+
+  /* Lyrics on taskbar: the current line replaces title / artist. */
+  .lyric { display: none; flex-direction: column; width: 260px; margin-right: 4px; line-height: 1.25; }
+  body.lyric-mode .meta { display: none; }
+  body.lyric-mode .lyric { display: flex; }
+  #lyric-box { overflow: hidden; white-space: nowrap; mask-image: linear-gradient(90deg, #000 92%, transparent); }
+  body.fits #lyric-box { mask-image: none; }
+  #lyric-text { display: inline-block; font-size: 13px; font-weight: 700; }
+  #lyric-text .sung { color: var(--accent); transition: color 120ms linear; }
+  #lyric-text.enter { animation: rise 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+  #lyric-sub { font-size: 10.5px; color: var(--text-3); }
+
+  #system { gap: 14px; padding: 0 10px 0 4px; }
+  .sys-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+  .meter { display: flex; flex-direction: column; gap: 3px; width: 64px; }
+  .meter .row { display: flex; justify-content: space-between; font-size: 11px; }
+  .meter .row span:first-child { color: var(--text-2); }
+  .meter .row span:last-child { font-weight: 700; }
+  #mem-bar > span { background: var(--mem); }
+  .net { display: flex; flex-direction: column; font-size: 11px; line-height: 1.35; font-weight: 600; min-width: 72px; }
+  .net .d { color: var(--accent); }
+  .net .u { color: var(--up); }
+</style>
+</head>
+<body data-page="music">
+<div id="pill">
+  <div id="music" class="mode">
+    <div id="art" class="art"></div>
+    <div class="meta">
+      <span id="title" class="t ellipsis">Nothing playing</span>
+      <span id="artist" class="a ellipsis">Play something in any app</span>
+    </div>
+    <div class="lyric" aria-live="off">
+      <div id="lyric-box"><div id="lyric-text"></div></div>
+      <span id="lyric-sub" class="ellipsis"></span>
+    </div>
+    <button id="prev" class="icon-btn ctl" aria-label="Previous track"></button>
+    <button id="play" class="play-btn ctl" aria-label="Play"></button>
+    <button id="next" class="icon-btn ctl" aria-label="Next track"></button>
+    <button id="lyr" class="icon-btn ctl" aria-label="Lyrics on desktop" aria-pressed="false"></button>
+  </div>
+  <div id="system" class="mode" aria-label="System overview">
+    <div class="sys-icon" aria-hidden="true"></div>
+    <div class="meter">
+      <div class="row"><span>CPU</span><span id="cpu">–</span></div>
+      <div id="cpu-bar" class="bar"><span></span></div>
+    </div>
+    <div class="meter">
+      <div class="row"><span>RAM</span><span id="mem">–</span></div>
+      <div id="mem-bar" class="bar"><span></span></div>
+    </div>
+    <div class="net">
+      <span><span class="d" aria-hidden="true">↓</span> <span id="down">–</span></span>
+      <span><span class="u" aria-hidden="true">↑</span> <span id="up">–</span></span>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script src="pill.js"></script>
+</body>
+</html>

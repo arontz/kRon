@@ -1,0 +1,63 @@
+:root {
+  --accent: #7fe0c6;
+  --accent-soft: rgba(127, 224, 198, 0.16);
+  --mem: #9fb7ff;
+  --up: #ffcf5c;
+  --text: #ffffff;
+  --text-2: rgba(255, 255, 255, 0.72);
+  --text-3: rgba(255, 255, 255, 0.6);
+  --line: rgba(255, 255, 255, 0.1);
+  --panel: rgba(20, 22, 30, 0.96);
+  --card: rgba(255, 255, 255, 0.05);
+  --track: rgba(255, 255, 255, 0.14);
+  --art: #c2603e;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  color: var(--text);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+button:disabled { opacity: 0.4; cursor: default; }
+
+.icon-btn { border-radius: 8px; transition: background 120ms ease; }
+.icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.icon-btn.on { color: var(--accent); background: var(--accent-soft); }
+
+.play-btn { border-radius: 50%; background: #fff; color: #111; transition: transform 120ms ease; }
+.play-btn:hover { transform: scale(1.06); }
+
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.art {
+  background: var(--art) center / cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+.art.has-img svg { display: none; }
+
+.bar { height: 4px; border-radius: 2px; background: var(--track); position: relative; overflow: hidden; }
+.bar > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--accent); }
