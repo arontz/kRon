@@ -1,6 +1,6 @@
 [package]
 name = "kron"
-version = "0.2.0"
+version = "0.2.1"
 description = "kRon: music, lyrics and system stats on the Windows taskbar"
 edition = "2021"
 
