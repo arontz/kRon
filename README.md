@@ -140,8 +140,9 @@ The installer ends up in `src-tauri/target/release/bundle/nsis`.
 Releases are built by GitHub Actions, not on your PC.
 
 1. Bump the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`
-2. Commit and push
-3. Tag and push the tag:
+2. Add a `## vX.Y.Z` section to the top of `CHANGELOG.md`: it becomes the release notes
+3. Commit and push
+4. Tag and push the tag:
 
    ```bash
    git tag v0.1.0

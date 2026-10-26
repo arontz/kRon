@@ -1,6 +1,7 @@
 name: Release
 
 # Pushing a tag like v0.1.0 builds the Windows installer and publishes it as a GitHub Release.
+# The release notes are the matching "## vX.Y.Z" section of CHANGELOG.md.
 on:
   push:
     tags:
@@ -14,6 +15,28 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Release notes
+        id: notes
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $raw = Get-Content CHANGELOG.md -Raw
+          $m = [regex]::Match($raw, "(?ms)^##\s+$([regex]::Escape($tag))[^\r\n]*\r?\n(.*?)(?=^##\s|\z)")
+          $changes = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "See the commit history for what changed." }
+          $lines = @(
+            "## What's new", "",
+            $changes, "",
+            "## Download", "",
+            "**Get kRon_*_x64-setup.exe below**, run it, and kRon appears next to your system tray.", "",
+            "Windows 10 or 11. If Windows shows 'Windows protected your PC', click **More info, then Run anyway** (the installer isn't code-signed yet).", "",
+            "Then play something in Spotify, a browser or any media app."
+          )
+          $body = $lines -join "`n"
+          $delim = "EOF_" + [guid]::NewGuid().ToString("N")
+          "body<<$delim" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $body | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $delim | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - uses: actions/setup-node@v4
         with:
@@ -34,13 +57,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: kRon ${{ github.ref_name }}
-          releaseBody: |
-            ## Download
-
-            **Get `kRon_*_x64-setup.exe` below**, run it, and kRon appears next to your system tray.
-
-            Windows 10 or 11. If Windows shows "Windows protected your PC", click **More info → Run anyway** (the installer isn't code-signed yet).
-
-            Then play something in Spotify, a browser or any media app.
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
