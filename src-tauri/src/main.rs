@@ -5,6 +5,7 @@ mod lyrics;
 mod media;
 mod shell;
 mod stats;
+mod update;
 
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicIsize};
 use std::sync::mpsc::{channel, Sender};
@@ -331,10 +332,12 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let move_pill = MenuItem::with_id(app, "move_pill", "Move pill…", true, None::<&str>)?;
     let dock = CheckMenuItem::with_id(app, "dock", "Show in calendar flyout (hide from taskbar)", true, false, None::<&str>)?;
     let autostart = CheckMenuItem::with_id(app, "autostart", "Start with Windows", true, autostart_on, None::<&str>)?;
+    let check_update = MenuItem::with_id(app, "check_update", "Check for updates…", true, None::<&str>)?;
+    let version = MenuItem::with_id(app, "version", format!("kRon v{}", update::VERSION), false, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit kRon", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&off, &desktop, &taskbar, &customize, &move_pill, &dock, &sep2, &autostart, &sep, &quit])?;
+    let menu = Menu::with_items(app, &[&off, &desktop, &taskbar, &customize, &move_pill, &dock, &sep2, &autostart, &check_update, &version, &sep, &quit])?;
 
     let autostart_item = autostart.clone();
     TrayIconBuilder::with_id("kron")
@@ -367,6 +370,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 let _ = if on { al.disable() } else { al.enable() };
                 let _ = autostart_item.set_checked(al.is_enabled().unwrap_or(false));
             }
+            "check_update" => update::check_for_updates(),
             "quit" => app.exit(0),
             _ => {}
         })

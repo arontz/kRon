@@ -101,7 +101,7 @@ Click the calendar icon in the hover panel's top-right corner (or tick **Show in
 
 ### Tray menu
 
-Right-click the kRon icon for **Lyrics off / on desktop / on taskbar**, **Customize lyrics…**, **Move pill…**, **Show in calendar flyout**, **Start with Windows** and **Quit**.
+Right-click the kRon icon for **Lyrics off / on desktop / on taskbar**, **Customize lyrics…**, **Move pill…**, **Show in calendar flyout**, **Start with Windows**, **Check for updates…** and **Quit**. **Check for updates…** asks GitHub for the latest release and, if there's a newer one than you're running, offers to open its download page.
 
 ---
 
@@ -183,7 +183,7 @@ src/
 - [ ] More System metrics: GPU, disk, battery, temperature
 - [ ] Real acrylic blur on the hover panel
 - [ ] Top and bottom edge docking, auto-hide taskbar and multiple monitors
-- [ ] In-app update check
+- [ ] Automatic in-app updates (the tray's **Check for updates…** currently opens the download page)
 
 ## Credits
 
