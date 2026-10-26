@@ -29,6 +29,10 @@
     };
   });
   $('customize').onclick = () => K.setOverlayEdit(true);
+  $('attach-pill').innerHTML = ICONS.calendar;
+  $('attach-pill').onclick = () => K.setDock(true);
+  $('move-pill').innerHTML = ICONS.move;
+  $('move-pill').onclick = () => K.setPillEdit(true);
 
   $('lyr-search').innerHTML = ICONS.search;
   $('lyr-folder').innerHTML = ICONS.folder;
@@ -149,6 +153,11 @@
     const place = s.settings.lyrics_on ? s.settings.lyr_place : 'off';
     document.querySelectorAll('.seg button').forEach((btn) => btn.setAttribute('aria-checked', String(btn.dataset.place === place)));
     $('customize').style.display = place === 'desktop' ? '' : 'none';
+    // The pill is a narrow column at a side edge, which has no room for a lyric line.
+    const docked = !!s.settings.pill_side;
+    const taskbarBtn = document.querySelector('.seg button[data-place="taskbar"]');
+    taskbarBtn.disabled = docked;
+    taskbarBtn.title = docked ? 'Not available while the pill is docked to a side edge' : '';
 
     const st = s.stats;
     $('cpu').textContent = Math.round(st.cpu);

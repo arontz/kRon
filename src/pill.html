@@ -21,6 +21,19 @@
   body.open #pill { background: rgba(255, 255, 255, 0.12); }
   .mode { display: none; align-items: center; gap: 2px; }
   body[data-page="music"] #music, body[data-page="system"] #system { display: flex; }
+  body.moving #music, body.moving #system { display: none; }
+  body.moving #pill { background: rgba(24, 26, 34, 0.96); border-color: rgba(255, 255, 255, 0.35); border-style: dashed; }
+
+  /* Move mode */
+  #move { display: none; align-items: center; gap: 4px; padding: 0 2px; font-size: 12px; color: var(--text-2); }
+  body.moving #move { display: flex; }
+  #grip { width: 40px; height: 32px; border-radius: 8px; cursor: grab; touch-action: none; color: #fff; background: rgba(255, 255, 255, 0.1); }
+  #grip:active { cursor: grabbing; }
+  #move .txt { margin: 0 8px 0 4px; }
+  #move .btn { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+  #move .btn:hover { background: rgba(255, 255, 255, 0.1); }
+  #pill-done { background: var(--accent); color: #0d1a16; }
+  #pill-done:hover { background: #a2ecd9 !important; }
 
   #art { width: 30px; height: 30px; border-radius: 7px; margin: 0 6px 0 2px; }
   .meta { display: flex; flex-direction: column; width: 132px; margin-right: 4px; line-height: 1.25; }
@@ -50,10 +63,28 @@
   .net { display: flex; flex-direction: column; font-size: 11px; line-height: 1.35; font-weight: 600; min-width: 72px; }
   .net .d { color: var(--accent); }
   .net .u { color: var(--up); }
-</style>
+
+  /* Docked to the left / right screen edge: a narrow column with no text (the track is a tooltip). */
+  body.vertical { justify-content: center; align-items: flex-start; }
+  body.vertical #pill { flex-direction: column; width: 56px; height: auto; padding: 8px 0; gap: 4px; border-radius: 18px; }
+  body.vertical .mode, body.vertical #move { flex-direction: column; align-items: center; gap: 4px; padding: 0; }
+  body.vertical #art { width: 38px; height: 38px; margin: 0 0 4px; border-radius: 9px; }
+  body.vertical .meta, body.vertical #lyric-sub { display: none; }
+  body.vertical #system { gap: 8px; padding: 0; }
+  body.vertical .meter { width: 42px; align-items: stretch; }
+  body.vertical .meter .row { flex-direction: column; align-items: center; gap: 0; font-size: 10px; }
+  body.vertical .net { min-width: 0; align-items: center; font-size: 10px; gap: 2px; }
+  body.vertical #move .txt { display: none; }
+  body.vertical #move .btn { width: 44px; padding: 0; }</style>
 </head>
 <body data-page="music">
 <div id="pill">
+  <div id="move" role="toolbar" aria-label="Move pill">
+    <button id="grip" aria-label="Drag to move the pill" title="Drag to move"></button>
+    <span class="txt">Drag to move</span>
+    <button id="pill-reset" class="btn">Reset</button>
+    <button id="pill-done" class="btn">Done</button>
+  </div>
   <div id="music" class="mode">
     <div id="art" class="art"></div>
     <div class="meta">

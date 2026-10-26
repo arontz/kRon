@@ -8,6 +8,8 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use windows::core::{w, PCWSTR};
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_CONTROL};
+use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED};
+use windows::Win32::UI::Accessibility::{CUIAutomation, IUIAutomation, TreeScope_Descendants};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
 use windows::Win32::UI::Shell::{SHQueryUserNotificationState, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -20,8 +22,14 @@ use crate::Shared;
 
 const OPEN_DELAY: Duration = Duration::from_millis(120);
 const CLOSE_DELAY: Duration = Duration::from_millis(300);
+/// How long the card's fly-out animation runs before its window is hidden.
+const DOCK_OUT: Duration = Duration::from_millis(240);
 pub const FLYOUT_W: f64 = 440.0;
 const OVERLAY_W: f64 = 680.0;
+/// Dragging the pill this close to a side edge docks it there as a vertical column…
+const DOCK_SNAP: f64 = 24.0;
+/// …and it takes this much further drag away from the edge to undock it again.
+const DOCK_RELEASE: f64 = 140.0;
 
 #[derive(Clone, Copy, PartialEq, Default, Debug)]
 struct Rect {
@@ -112,6 +120,80 @@ fn is_above(win: HWND, taskbar: HWND) -> bool {
     }
 }
 
+/// The Windows notification centre / calendar flyout: a CoreWindow docked to the right screen edge,
+/// nearly full height. It closes the moment it loses focus, so it only ever shows up as the foreground window.
+fn notification_center(fg: HWND, mon: RECT) -> Option<RECT> {
+    unsafe {
+        if fg.is_invalid() {
+            return None;
+        }
+        let mut buf = [0u16; 64];
+        let n = GetClassNameW(fg, &mut buf) as usize;
+        if String::from_utf16_lossy(&buf[..n.min(buf.len())]) != "Windows.UI.Core.CoreWindow" {
+            return None;
+        }
+        let mut r = RECT::default();
+        GetWindowRect(fg, &mut r).ok()?;
+        let (w, h) = (r.right - r.left, r.bottom - r.top);
+        let mon_h = mon.bottom - mon.top;
+        (r.right >= mon.right - 2 && (250..=700).contains(&w) && h * 10 >= mon_h * 6).then_some(r)
+    }
+}
+
+/// Where the flyout's first card starts. The flyout window itself is a transparent full-height pane, and its
+/// notification card grows with the number of notifications, so ask UI Automation for the highest card-sized element.
+fn flyout_content_top(uia: &IUIAutomation, hwnd: HWND) -> Option<i32> {
+    unsafe {
+        let el = uia.ElementFromHandle(hwnd).ok()?;
+        let root = el.CurrentBoundingRectangle().ok()?;
+        let all = el.FindAll(TreeScope_Descendants, &uia.CreateTrueCondition().ok()?).ok()?;
+        let root_h = root.bottom - root.top;
+        let mut top = i32::MAX;
+        for i in 0..all.Length().ok()? {
+            let Ok(e) = all.GetElement(i) else { continue };
+            let Ok(r) = e.CurrentBoundingRectangle() else { continue };
+            if r.right - r.left >= 250 && r.bottom - r.top >= 40 && r.bottom - r.top < root_h - 8 && r.top > root.top {
+                top = top.min(r.top);
+            }
+        }
+        (top != i32::MAX).then_some(top)
+    }
+}
+
+/// UI Automation calls cross into another process and can be slow, so they run off the shell thread.
+fn uia_thread(shared: Shared) {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+    }
+    let uia: Option<IUIAutomation> = unsafe { CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER).ok() };
+    let Some(uia) = uia else { return };
+    loop {
+        std::thread::sleep(Duration::from_millis(500));
+        if !shared.dock_open.load(Ordering::Relaxed) {
+            continue;
+        }
+        let h = shared.dock_hwnd.load(Ordering::Relaxed);
+        if h == 0 {
+            continue;
+        }
+        if let Some(top) = flyout_content_top(&uia, HWND(h as _)) {
+            shared.dock_top.store(top, Ordering::Relaxed);
+        }
+    }
+}
+
+/// Full area of the monitor the taskbar is on.
+fn monitor_rect(taskbar: HWND, fallback: RECT) -> RECT {
+    unsafe {
+        let mut mi = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
+        if GetMonitorInfoW(MonitorFromWindow(taskbar, MONITOR_DEFAULTTONEAREST), &mut mi).as_bool() {
+            mi.rcMonitor
+        } else {
+            fallback
+        }
+    }
+}
+
 /// A game, fullscreen video or presentation. (Not QUNS_BUSY: Windows reports that for ordinary apps too.)
 fn fullscreen_app_running() -> bool {
     unsafe {
@@ -144,20 +226,30 @@ fn fullscreen_app_running() -> bool {
 
 pub fn run(app: AppHandle) {
     let shared = app.state::<Shared>().inner().clone();
-    let (Some(pill), Some(flyout), Some(overlay)) = (
+    let (Some(pill), Some(flyout), Some(overlay), Some(dock)) = (
         app.get_webview_window("pill"),
         app.get_webview_window("flyout"),
         app.get_webview_window("overlay"),
+        app.get_webview_window("dock"),
     ) else {
         return;
     };
     let _ = overlay.set_ignore_cursor_events(true);
-    let (Some(h_pill), Some(h_fly), Some(h_ov)) = (hwnd_of(&pill), hwnd_of(&flyout), hwnd_of(&overlay)) else {
+    let (Some(h_pill), Some(h_fly), Some(h_ov), Some(h_dock)) =
+        (hwnd_of(&pill), hwnd_of(&flyout), hwnd_of(&overlay), hwnd_of(&dock))
+    else {
         return;
     };
-    for h in [h_pill, h_fly, h_ov] {
+    for h in [h_pill, h_fly, h_ov, h_dock] {
         prepare(h);
     }
+    {
+        let shared = shared.clone();
+        std::thread::spawn(move || uia_thread(shared));
+    }
+    let mut dock_open = false;
+    let mut dock_rect = Rect::default();
+    let mut dock_hide_at: Option<Instant> = None;
 
     let mut pill_rect = Rect::default();
     let mut fly_rect = Rect::default();
@@ -169,6 +261,8 @@ pub fn run(app: AppHandle) {
     let mut hover_since: Option<Instant> = None;
     let mut last_inside = Instant::now();
     let mut last_layout = Instant::now() - Duration::from_secs(5);
+    let mut free: Option<(f64, f64)> = None;
+    let mut horiz_w = 340.0;
 
     loop {
         std::thread::sleep(Duration::from_millis(40));
@@ -178,21 +272,112 @@ pub fn run(app: AppHandle) {
         // Layout: cheap to compute, only touch windows when something moved (or once a second for z-order).
         if let Some(tb) = taskbar() {
             let pill_w = *shared.pill_w.lock().unwrap();
+            let pill_h = *shared.pill_h.lock().unwrap();
             let bar_h = tb.bar.bottom - tb.bar.top;
+            let mon = monitor_rect(tb.hwnd, tb.bar);
+            let (mon_w, mon_h) = (((mon.right - mon.left) as f64 / scale), ((mon.bottom - mon.top) as f64 / scale));
+            let (pw, ph) = (px(pill_w), px(pill_h));
+
+            let mut st = shared.settings.lock().unwrap().clone();
+            // Remember how wide the horizontal pill is, so we know when it touches a side edge.
+            if st.pill_side.is_empty() {
+                horiz_w = pill_w;
+            }
+
+            // Apply drag distance from the pill's handle. `free` follows the pointer without snapping,
+            // so the pill can dock to a side edge and still be dragged away from it.
+            let mv = {
+                let mut m = shared.pill_move.lock().unwrap();
+                std::mem::take(&mut *m)
+            };
+            if mv.dx != 0.0 || mv.dy != 0.0 || mv.commit {
+                let base = if st.pill_placed {
+                    (st.pill_x, st.pill_y)
+                } else {
+                    (
+                        (tb.tray_left - mon.left - pw - px(8.0)) as f64 / scale,
+                        (tb.bar.top - mon.top + (bar_h - ph) / 2) as f64 / scale,
+                    )
+                };
+                let f = free.get_or_insert(base);
+                f.0 = (f.0 + mv.dx).clamp(-300.0, mon_w + 300.0);
+                f.1 = (f.1 + mv.dy).clamp(-300.0, mon_h + 300.0);
+                let dock = DOCK_SNAP;
+                // Lyrics on the taskbar need the wide pill, so it only docks to a side when they aren't.
+                let can_dock = !(st.lyrics_on && st.lyr_place == "taskbar");
+                let side = match st.pill_side.as_str() {
+                    "" if can_dock && f.0 <= dock => "left",
+                    "" if can_dock && f.0 + horiz_w >= mon_w - dock => "right",
+                    "left" if f.0 <= DOCK_RELEASE => "left",
+                    "right" if f.0 + pill_w >= mon_w - DOCK_RELEASE => "right",
+                    _ => "",
+                };
+                let new_x = match side {
+                    "left" => 0.0,
+                    "right" => (mon_w - pill_w).max(0.0),
+                    _ => f.0.clamp(0.0, (mon_w - horiz_w).max(0.0)),
+                };
+                let new_y = f.1.clamp(0.0, (mon_h - pill_h).max(0.0));
+                let side = side.to_string();
+                if mv.commit {
+                    free = None;
+                }
+                crate::update_settings_opt(&app, mv.commit, |s| {
+                    s.pill_placed = true;
+                    s.pill_x = new_x;
+                    s.pill_y = new_y;
+                    s.pill_side = side;
+                });
+                st = shared.settings.lock().unwrap().clone();
+            }
+
+            let (lx, ly) = if st.pill_placed {
+                (st.pill_x, st.pill_y)
+            } else {
+                (
+                    (tb.tray_left - mon.left - pw - px(8.0)) as f64 / scale,
+                    (tb.bar.top - mon.top + (bar_h - ph) / 2) as f64 / scale,
+                )
+            };
             let want_pill = Rect {
-                x: tb.tray_left - px(pill_w) - px(8.0),
-                y: tb.bar.top + (bar_h - px(40.0)) / 2,
-                w: px(pill_w),
-                h: px(40.0),
+                x: match st.pill_side.as_str() {
+                    "left" => mon.left,
+                    "right" => mon.right - pw,
+                    _ => (mon.left + px(lx)).clamp(mon.left, (mon.right - pw).max(mon.left)),
+                },
+                y: (mon.top + px(ly)).clamp(mon.top, (mon.bottom - ph).max(mon.top)),
+                w: pw,
+                h: ph,
             };
-            let fly_h = *shared.flyout_h.lock().unwrap();
+
+            // The panel opens above the pill (below if there's no room), or beside it when the pill is docked to a side.
+            let fly_h = px(*shared.flyout_h.lock().unwrap());
             let fw = px(FLYOUT_W);
-            let want_fly = Rect {
-                x: (want_pill.x + want_pill.w - fw).min(tb.bar.right - fw - px(8.0)),
-                y: tb.bar.top - px(fly_h) - px(8.0),
-                w: fw,
-                h: px(fly_h),
+            let gap = px(8.0);
+            let want_fly = match st.pill_side.as_str() {
+                "left" => Rect {
+                    x: want_pill.x + want_pill.w + gap,
+                    y: want_pill.y.clamp(mon.top, (mon.bottom - fly_h).max(mon.top)),
+                    w: fw,
+                    h: fly_h,
+                },
+                "right" => Rect {
+                    x: want_pill.x - fw - gap,
+                    y: want_pill.y.clamp(mon.top, (mon.bottom - fly_h).max(mon.top)),
+                    w: fw,
+                    h: fly_h,
+                },
+                _ => {
+                    let above = want_pill.y - fly_h - gap >= mon.top;
+                    Rect {
+                        x: (want_pill.x + want_pill.w - fw).clamp(mon.left, (mon.right - fw).max(mon.left)),
+                        y: if above { want_pill.y - fly_h - gap } else { want_pill.y + want_pill.h + gap },
+                        w: fw,
+                        h: fly_h,
+                    }
+                }
             };
+            let moving_pill = shared.pill_edit.load(Ordering::Relaxed);
             let (dx, dy) = {
                 let s = shared.settings.lock().unwrap();
                 (s.lyr_dx, s.lyr_dy)
@@ -222,7 +407,13 @@ pub fn run(app: AppHandle) {
                     ov_shown = false;
                 }
             } else {
-                if want_pill != pill_rect || periodic || !is_above(h_pill, tb.hwnd) {
+                if st.dock_on {
+                    // Attached to the calendar flyout: the pill leaves the taskbar and only the card shows.
+                    if pill_rect != Rect::default() {
+                        hide(h_pill);
+                        pill_rect = Rect::default();
+                    }
+                } else if want_pill != pill_rect || periodic || !is_above(h_pill, tb.hwnd) {
                     place(h_pill, want_pill);
                     pill_rect = want_pill;
                 }
@@ -246,6 +437,52 @@ pub fn run(app: AppHandle) {
                 }
             }
 
+            // Notification centre open: show the now-playing card above its first card.
+            let fg = unsafe { GetForegroundWindow() };
+            match notification_center(fg, mon).filter(|_| st.dock_on && !hidden_for_fullscreen) {
+                Some(fr) => {
+                    shared.dock_hwnd.store(fg.0 as isize, Ordering::Relaxed);
+                    shared.dock_open.store(true, Ordering::Relaxed);
+                    let dw = (fr.right - fr.left) - px(24.0);
+                    let dh = px(*shared.dock_h.lock().unwrap());
+                    let top = match shared.dock_top.load(Ordering::Relaxed) {
+                        t if t > 0 => t,
+                        _ => fr.bottom - px(711.0), // until UI Automation answers: the usual spot with no notifications
+                    };
+                    let gap = px(8.0);
+                    let mut r = Rect { x: fr.left + px(12.0), y: top - dh - gap, w: dw, h: dh };
+                    if r.y < mon.top + gap {
+                        // No room above the cards (lots of notifications): sit beside the flyout instead.
+                        r = Rect { x: fr.left - dw - gap, y: fr.bottom - dh - px(12.0), w: dw, h: dh };
+                    }
+                    let opening = !dock_open;
+                    if opening || r != dock_rect || periodic || !is_above(h_dock, fg) {
+                        place(h_dock, r);
+                        dock_rect = r;
+                        dock_open = true;
+                    }
+                    if opening {
+                        dock_hide_at = None;
+                        let _ = app.emit("dock_vis", true); // the card flies in from the right
+                    }
+                }
+                None => {
+                    if dock_open {
+                        dock_open = false;
+                        shared.dock_open.store(false, Ordering::Relaxed);
+                        shared.dock_top.store(0, Ordering::Relaxed);
+                        let _ = app.emit("dock_vis", false); // fly out first, hide the window once it's gone
+                        dock_hide_at = Some(Instant::now() + DOCK_OUT);
+                    }
+                }
+            }
+            if let Some(t) = dock_hide_at {
+                if !dock_open && Instant::now() >= t {
+                    hide(h_dock);
+                    dock_hide_at = None;
+                }
+            }
+
             if open && (want_fly != fly_rect || !is_above(h_fly, tb.hwnd)) {
                 place(h_fly, want_fly);
                 fly_rect = want_fly;
@@ -257,7 +494,8 @@ pub fn run(app: AppHandle) {
                 if !editing && ov_shown && ov_rect.contains(c.x, c.y) && ctrl_down() {
                     crate::set_overlay_edit_inner(&app, true);
                 }
-                let in_pill = !hidden_for_fullscreen && pill_rect.contains(c.x, c.y);
+                // While the pill is being moved, the panel stays out of the way.
+                let in_pill = !hidden_for_fullscreen && !moving_pill && pill_rect.contains(c.x, c.y);
                 let inside = in_pill || (open && fly_rect.contains(c.x, c.y));
                 let now = Instant::now();
                 if inside {
@@ -276,7 +514,7 @@ pub fn run(app: AppHandle) {
                     } else {
                         hover_since = None;
                     }
-                } else if now - last_inside > CLOSE_DELAY {
+                } else if now - last_inside > CLOSE_DELAY || moving_pill {
                     open = false;
                     hover_since = None;
                     hide(h_fly);

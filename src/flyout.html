@@ -89,6 +89,8 @@
   .seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); }
   .seg button { height: 26px; padding: 0 10px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--text-2); }
   .seg button:hover { color: #fff; }
+  .seg button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .seg button:disabled:hover { color: var(--text-2); }
   .seg button[aria-checked="true"] { background: rgba(255, 255, 255, 0.16); color: #fff; }
   .switch { width: 44px; height: 24px; padding: 2px; border-radius: 12px; background: rgba(255, 255, 255, 0.22); justify-content: flex-start; transition: background 150ms ease; }
   .switch span { width: 20px; height: 20px; border-radius: 50%; background: #fff; display: block; transition: transform 150ms ease; }
@@ -112,6 +114,9 @@
   .soon span { font-size: 11px; color: var(--text-3); }
 
   .footer { display: flex; align-items: center; justify-content: center; gap: 10px; position: relative; }
+  .move-btn { position: absolute; z-index: 2; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 9px; color: var(--text-2); background: rgba(255, 255, 255, 0.06); }
+  .attach-btn { right: 48px; }
+  .move-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.16); }
   .footer .name { font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-3); }
   .dots { display: flex; gap: 5px; }
   .dots span { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); display: block; transition: width 200ms ease, background 200ms ease; }
@@ -208,6 +213,8 @@
     <span id="page-name" class="name">Now playing</span>
     <div class="dots" aria-hidden="true"><span id="dot-music" class="on"></span><span id="dot-system"></span></div>
   </div>
+  <button id="attach-pill" class="move-btn attach-btn" aria-label="Move kRon into the calendar flyout" title="Move kRon off the taskbar and into the calendar flyout"></button>
+  <button id="move-pill" class="move-btn" aria-label="Move the pill" title="Move the pill (drag it anywhere)"></button>
 </div>
 <script src="common.js"></script>
 <script src="flyout.js"></script>

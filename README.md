@@ -38,6 +38,8 @@ kRon puts a small pill next to your system tray. It shows what's playing, and ho
 | **Hover panel** | Opens after a short hover and closes when you leave. Side arrows switch between **Now playing** and **System**. |
 | **Synced lyrics** | Shown on the desktop, on the taskbar, or turned off. Works with any player. |
 | **System overview** | CPU with a live graph, memory used, and download / upload speed. |
+| **Move it anywhere** | Drag the pill off a crowded taskbar. Drop it at a left or right screen edge and it becomes a narrow vertical column. |
+| **Calendar flyout** | Optionally move kRon off the taskbar entirely: a now-playing card slides in above the Windows notifications when you open the clock. |
 
 ### Now playing
 
@@ -86,9 +88,20 @@ The buttons on the panel's lyrics card help with this:
 | Folder | Opens your lyrics folder |
 | Reload | Forgets the saved copy and looks the track up again |
 
+### Moving the pill
+
+Click the six-dot move icon in the top-right corner of the hover panel (or choose **Move pill…** from the tray menu), then drag the pill by its handle anywhere on the screen. **Reset** puts it back beside the tray, and **Done** locks it. The position is remembered.
+
+- Drag it to within a few pixels of the **left or right screen edge** and it docks as a narrow column: art, controls and lyrics button stacked, with the track shown as a tooltip. Drag it away to undock.
+- **Lyrics on taskbar** needs the wide pill, so that option is unavailable while the pill is docked to a side edge.
+
+### In the calendar flyout
+
+Click the calendar icon in the hover panel's top-right corner (or tick **Show in calendar flyout** in the tray menu) to move kRon off the taskbar. Whenever you open the Windows clock / notification centre, a now-playing card with controls and the current lyric line slides in above the Notifications card. Use the taskbar icon on the card to bring the pill back.
+
 ### Tray menu
 
-Right-click the kRon icon for **Lyrics off / on desktop / on taskbar**, **Customize lyrics…**, **Start with Windows** and **Quit**.
+Right-click the kRon icon for **Lyrics off / on desktop / on taskbar**, **Customize lyrics…**, **Move pill…**, **Show in calendar flyout**, **Start with Windows** and **Quit**.
 
 ---
 
@@ -145,11 +158,12 @@ src-tauri/src/
 ├─ media.rs     Windows media controls: track, timeline, artwork, controls
 ├─ lyrics.rs    lyrics lookup, disk cache, LRC parsing
 ├─ stats.rs     CPU / memory / network sampling (only while shown)
-└─ shell.rs     taskbar placement, hover open/close, fullscreen detection
+└─ shell.rs     pill placement and docking, hover open/close, notification-centre card, fullscreen detection
 
 src/
 ├─ pill.*       the taskbar pill
 ├─ flyout.*     the hover panel
+├─ dock.*       the card shown above the notification centre
 ├─ overlay.html the desktop lyrics
 └─ common.*     shared state and styles
 ```
@@ -168,8 +182,8 @@ src/
 
 - [ ] More System metrics: GPU, disk, battery, temperature
 - [ ] Real acrylic blur on the hover panel
-- [ ] Taskbar on other screen edges, auto-hide and multiple monitors
-- [ ] Installer builds and in-app updates
+- [ ] Top and bottom edge docking, auto-hide taskbar and multiple monitors
+- [ ] In-app update check
 
 ## Credits
 
