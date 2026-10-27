@@ -115,12 +115,27 @@
   new ResizeObserver(reportSize).observe($('pill'));
 
   let wasVertical = false;
+  let wasMoving = false;
   function render(s, what) {
     const vertical = K.isVertical();
     document.body.classList.toggle('vertical', vertical);
     // The pill only has a music and a system face; the Appearance panel page shows the music one.
     document.body.dataset.page = s.settings.page === 'system' ? 'system' : 'music';
     document.body.classList.toggle('open', s.flyoutOpen);
+    // The move bar takes the same space as the pill it stands in for, so where you drop it is where the pill ends up.
+    // Measured before the pill's content is swapped out.
+    if (s.pillEdit !== wasMoving) {
+      const pill = $('pill');
+      if (s.pillEdit) {
+        const r = pill.getBoundingClientRect();
+        pill.style.minWidth = `${Math.ceil(r.width)}px`;
+        pill.style.minHeight = `${Math.ceil(r.height)}px`;
+      } else {
+        pill.style.minWidth = '';
+        pill.style.minHeight = '';
+      }
+      wasMoving = s.pillEdit;
+    }
     document.body.classList.toggle('moving', s.pillEdit);
     const m = s.media;
     $('title').textContent = m.active ? m.title : 'Nothing playing';
