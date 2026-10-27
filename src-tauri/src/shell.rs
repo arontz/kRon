@@ -8,13 +8,16 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use windows::core::{w, PCWSTR};
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_CONTROL};
+use windows::Win32::Foundation::ERROR_SUCCESS;
+use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
 use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED};
 use windows::Win32::UI::Accessibility::{CUIAutomation, IUIAutomation, TreeScope_Descendants};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
 use windows::Win32::UI::Shell::{SHQueryUserNotificationState, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN};
 use windows::Win32::UI::WindowsAndMessaging::{
     FindWindowExW, FindWindowW, GetClassNameW, GetForegroundWindow, GetTopWindow, GetWindow, GetWindowLongPtrW,
-    GetWindowRect, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE, GW_HWNDNEXT, HWND_TOPMOST,
+    GetWindowRect, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWLP_HWNDPARENT, GWL_EXSTYLE, GW_HWNDNEXT,
+    HWND_TOPMOST,
     SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_HIDE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
 };
 
@@ -60,6 +63,15 @@ fn prepare(hwnd: HWND) {
     unsafe {
         let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
         SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) as isize);
+    }
+}
+
+/// Make the taskbar the window's owner. While Start (and similar flyouts) is open, Windows 11 moves the taskbar into a
+/// higher layer that paints over ordinary topmost windows, hiding the pill. A window owned by the taskbar stays above
+/// it in that layer.
+fn set_owner(hwnd: HWND, owner: HWND) {
+    unsafe {
+        SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner.0 as isize);
     }
 }
 
@@ -117,6 +129,24 @@ fn is_above(win: HWND, taskbar: HWND) -> bool {
             };
         }
         true
+    }
+}
+
+/// Whether the Windows taskbar uses the light theme ("Choose your default Windows mode" in Settings > Colors).
+pub fn taskbar_is_light() -> bool {
+    unsafe {
+        let mut data: u32 = 0;
+        let mut size = std::mem::size_of::<u32>() as u32;
+        let r = RegGetValueW(
+            HKEY_CURRENT_USER,
+            w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
+            w!("SystemUsesLightTheme"),
+            RRF_RT_REG_DWORD,
+            None,
+            Some(&mut data as *mut u32 as *mut core::ffi::c_void),
+            Some(&mut size),
+        );
+        r == ERROR_SUCCESS && data == 1
     }
 }
 
@@ -261,6 +291,7 @@ pub fn run(app: AppHandle) {
     let mut hover_since: Option<Instant> = None;
     let mut last_inside = Instant::now();
     let mut last_layout = Instant::now() - Duration::from_secs(5);
+    let mut owned_by = HWND(std::ptr::null_mut());
     let mut free: Option<(f64, f64)> = None;
     let mut horiz_w = 340.0;
 
@@ -271,6 +302,12 @@ pub fn run(app: AppHandle) {
 
         // Layout: cheap to compute, only touch windows when something moved (or once a second for z-order).
         if let Some(tb) = taskbar() {
+            // Also redone when Explorer restarts and the taskbar gets a new window handle.
+            if tb.hwnd != owned_by {
+                set_owner(h_pill, tb.hwnd);
+                set_owner(h_fly, tb.hwnd);
+                owned_by = tb.hwnd;
+            }
             let pill_w = *shared.pill_w.lock().unwrap();
             let pill_h = *shared.pill_h.lock().unwrap();
             let bar_h = tb.bar.bottom - tb.bar.top;
@@ -397,6 +434,11 @@ pub fn run(app: AppHandle) {
             if periodic {
                 last_layout = Instant::now();
                 hidden_for_fullscreen = fullscreen_app_running();
+                // The user can switch Windows between light and dark at any time.
+                let light = taskbar_is_light();
+                if shared.taskbar_light.swap(light, Ordering::Relaxed) != light {
+                    let _ = app.emit("sys_theme", light);
+                }
             }
 
             if hidden_for_fullscreen {

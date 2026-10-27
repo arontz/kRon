@@ -130,7 +130,8 @@
   function render(s, what) {
     const vertical = K.isVertical();
     document.body.classList.toggle('vertical', vertical);
-    document.body.dataset.page = s.settings.page;
+    // The pill only has a music and a system face; the Appearance panel page shows the music one.
+    document.body.dataset.page = s.settings.page === 'system' ? 'system' : 'music';
     document.body.classList.toggle('open', s.flyoutOpen);
     document.body.classList.toggle('moving', s.pillEdit);
     const m = s.media;

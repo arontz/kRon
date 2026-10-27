@@ -1,8 +1,8 @@
 (function () {
   const { ICONS } = K;
   const $ = (id) => document.getElementById(id);
-  const PAGES = ['music', 'system'];
-  const NAMES = { music: 'Now playing', system: 'System' };
+  const PAGES = ['music', 'system', 'appearance'];
+  const NAMES = { music: 'Now playing', system: 'System', appearance: 'Appearance' };
 
   $('art').innerHTML = ICONS.note;
   $('go-prev').innerHTML = ICONS.left;
@@ -17,7 +17,7 @@
   $('play').onclick = () => K.cmd('toggle');
   $('shuffle').onclick = () => K.cmd('shuffle');
   $('repeat').onclick = () => K.cmd('repeat');
-  document.querySelectorAll('.seg button').forEach((btn) => {
+  document.querySelectorAll('.place-seg button').forEach((btn) => {
     btn.onclick = () => {
       const place = btn.dataset.place;
       if (place === 'off') {
@@ -73,6 +73,53 @@
       if (t >= 0) K.cmd('seek', t);
     };
   });
+
+  // ---- Appearance page ----
+  const ACCENTS = [
+    ['#7fe0c6', 'Mint'], ['#6cb6ff', 'Blue'], ['#b79cff', 'Violet'], ['#ff8fb1', 'Pink'], ['#ffb35c', 'Orange'], ['#ffe066', 'Yellow'],
+  ];
+  const LYR_TEXT = [
+    ['', 'Automatic (white)'], ['#ffffff', 'White'], ['#14161b', 'Black'], ['#ffe066', 'Yellow'], ['#7fe0c6', 'Mint'], ['#ff8fb1', 'Pink'],
+  ];
+  const LYR_HI = [
+    ['', 'Automatic (accent colour)'], ['#7fe0c6', 'Mint'], ['#6cb6ff', 'Blue'], ['#ffe066', 'Yellow'], ['#ff8fb1', 'Pink'], ['#ffb35c', 'Orange'],
+  ];
+  function buildSwatches(id, list, onPick) {
+    const box = $(id);
+    list.forEach(([color, name]) => {
+      const b = document.createElement('button');
+      b.className = 'sw' + (color ? '' : ' auto');
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-label', name);
+      b.title = name;
+      b.dataset.color = color;
+      if (color) b.style.background = color;
+      b.onclick = () => onPick(color);
+      box.appendChild(b);
+    });
+  }
+  buildSwatches('accent-sw', ACCENTS, (c) => K.setTheme({ accent: c }));
+  buildSwatches('ltext-sw', LYR_TEXT, (c) => K.setTheme({ lyrText: c }));
+  buildSwatches('lhi-sw', LYR_HI, (c) => K.setTheme({ lyrHi: c }));
+  document.querySelectorAll('.theme-seg button').forEach((b) => { b.onclick = () => K.setTheme({ mode: b.dataset.theme }); });
+
+  const hue = $('accent-hue');
+  const hueColor = () => K.hslToHex(Number(hue.value), 0.75, 0.68);
+  hue.addEventListener('input', () => K.setTheme({ accent: hueColor(), save: false }));
+  hue.addEventListener('change', () => K.setTheme({ accent: hueColor() }));
+
+  function renderAppearance(s) {
+    const st = s.settings;
+    document.querySelectorAll('.theme-seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.theme === st.theme_mode)));
+    $('theme-note').textContent = st.theme_mode === 'auto'
+      ? `Following your taskbar: ${s.taskbarLight ? 'light' : 'dark'}. Text switches to match when you change Windows' theme.`
+      : 'Fixed, whatever the taskbar looks like.';
+    const mark = (id, current) => document.querySelectorAll(`#${id} .sw`).forEach((b) => b.setAttribute('aria-checked', String(b.dataset.color.toLowerCase() === (current || '').toLowerCase())));
+    mark('accent-sw', st.accent);
+    mark('ltext-sw', st.lyr_text);
+    mark('lhi-sw', st.lyr_hi);
+    if (document.activeElement !== hue && !hue.matches(':active')) hue.value = String(Math.round(K.hexToHsl(st.accent)[0]));
+  }
 
   // Keep the window exactly as tall as the panel.
   let lastH = 0;
@@ -135,6 +182,7 @@
     $('page-name').textContent = NAMES[page];
     $('dot-music').classList.toggle('on', page === 'music');
     $('dot-system').classList.toggle('on', page === 'system');
+    $('dot-appearance').classList.toggle('on', page === 'appearance');
 
     const m = s.media;
     $('title').textContent = m.active ? m.title : 'Nothing playing';
@@ -151,11 +199,11 @@
     $('repeat').setAttribute('aria-label', `Repeat: ${m.repeat === 'none' ? 'off' : m.repeat === 'track' ? 'this track' : 'all'}`);
 
     const place = s.settings.lyrics_on ? s.settings.lyr_place : 'off';
-    document.querySelectorAll('.seg button').forEach((btn) => btn.setAttribute('aria-checked', String(btn.dataset.place === place)));
+    document.querySelectorAll('.place-seg button').forEach((btn) => btn.setAttribute('aria-checked', String(btn.dataset.place === place)));
     $('customize').style.display = place === 'desktop' ? '' : 'none';
     // The pill is a narrow column at a side edge, which has no room for a lyric line.
     const docked = !!s.settings.pill_side;
-    const taskbarBtn = document.querySelector('.seg button[data-place="taskbar"]');
+    const taskbarBtn = document.querySelector('.place-seg button[data-place="taskbar"]');
     taskbarBtn.disabled = docked;
     taskbarBtn.title = docked ? 'Not available while the pill is docked to a side edge' : '';
 
@@ -172,6 +220,7 @@
     $('down').textContent = K.fmtRate(st.down);
     $('up').textContent = K.fmtRate(st.up);
 
+    renderAppearance(s);
     if (what !== 'stats') {
       renderLyrics(true);
       tick();

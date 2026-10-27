@@ -10,7 +10,7 @@
     width: 100%;
     border-radius: 24px;
     background: var(--panel);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--line);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     padding: 22px 46px 14px;
     position: relative;
@@ -27,14 +27,14 @@
 
   .arrow {
     position: absolute; z-index: 2; top: 50%; margin-top: -22px; width: 30px; height: 44px; border-radius: 12px;
-    background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.8); transition: background 120ms ease;
+    background: var(--surface); color: var(--text-2); transition: background 120ms ease;
   }
-  .arrow:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+  .arrow:hover { background: var(--hover-2); color: var(--text); }
   #go-prev { left: 8px; }
   #go-next { right: 8px; }
 
   .page { display: none; flex-direction: column; gap: 16px; position: relative; }
-  body[data-page="music"] #page-music, body[data-page="system"] #page-system { display: flex; }
+  body[data-page="music"] #page-music, body[data-page="system"] #page-system, body[data-page="appearance"] #page-appearance { display: flex; }
   .slide-R { animation: slideR 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
   .slide-L { animation: slideL 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
   @keyframes slideR { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
@@ -47,13 +47,13 @@
   .head-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
   #title { font-size: 19px; font-weight: 700; letter-spacing: -0.2px; }
   #sub { font-size: 13px; color: var(--text-2); }
-  #source { align-self: flex-start; margin-top: 2px; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.78); }
+  #source { align-self: flex-start; margin-top: 2px; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--hover); color: var(--text-2); }
   #source:empty { display: none; }
 
   .seek { display: flex; flex-direction: column; gap: 6px; }
   #seekbar { height: 14px; display: flex; align-items: center; cursor: pointer; }
   #seekbar .bar { flex: 1; overflow: visible; }
-  #knob { position: absolute; top: -4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #fff; }
+  #knob { position: absolute; top: -4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--text); }
   .times { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 
   .controls { display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -62,36 +62,36 @@
   .controls .mid svg { width: 20px; height: 20px; }
   #play { width: 52px; height: 52px; }
   #play svg { width: 20px; height: 20px; }
-  .controls .on { color: var(--accent); }
+  .controls .on { color: var(--accent-text); }
   #repeat { position: relative; }
   #repeat[data-mode="track"]::after { content: '1'; position: absolute; right: 6px; bottom: 5px; font-size: 9px; font-weight: 700; }
 
-  .card { border-radius: 16px; background: var(--card); border: 1px solid rgba(255, 255, 255, 0.06); padding: 12px 14px; }
+  .card { border-radius: 16px; background: var(--card); border: 1px solid var(--line); padding: 12px 14px; }
   .lyr-card { display: flex; flex-direction: column; gap: 6px; }
   .label { font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-3); }
   .lyr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .lyr-tools { display: flex; gap: 2px; margin: -4px -6px -4px 0; }
   .tool { width: 28px; height: 28px; border-radius: 7px; color: var(--text-2); }
-  .tool:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .tool:hover { background: var(--hover); color: var(--text); }
   /* Long lines wrap (up to 3 rows) instead of being cut off. */
   .lyr-line {
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
     text-align: left; white-space: normal; overflow-wrap: anywhere; line-height: 1.35;
     font-size: 13px; color: var(--text-3); min-height: 18px; width: 100%;
   }
-  .lyr-line:hover { color: #fff; }
-  .lyr-line.cur { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .lyr-line:hover { color: var(--text); }
+  .lyr-line.cur { font-size: 15px; font-weight: 700; color: var(--hi-ui); }
   #lyr-msg { font-size: 13px; color: var(--text-2); }
 
   .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
-  .text-btn { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); }
+  .text-btn { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--accent-text); background: var(--accent-soft); }
   .text-btn:hover { background: rgba(127, 224, 198, 0.26); }
-  .seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); }
+  .seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--card); }
   .seg button { height: 26px; padding: 0 10px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--text-2); }
-  .seg button:hover { color: #fff; }
+  .seg button:hover { color: var(--text); }
   .seg button:disabled { opacity: 0.35; cursor: not-allowed; }
   .seg button:disabled:hover { color: var(--text-2); }
-  .seg button[aria-checked="true"] { background: rgba(255, 255, 255, 0.16); color: #fff; }
+  .seg button[aria-checked="true"] { background: var(--hover-2); color: var(--text); }
   .switch { width: 44px; height: 24px; padding: 2px; border-radius: 12px; background: rgba(255, 255, 255, 0.22); justify-content: flex-start; transition: background 150ms ease; }
   .switch span { width: 20px; height: 20px; border-radius: 50%; background: #fff; display: block; transition: transform 150ms ease; }
   .switch[aria-checked="true"] { background: var(--accent); }
@@ -108,19 +108,40 @@
   #mem-bar { height: 6px; margin: 11px 0; border-radius: 3px; }
   #mem-bar > span { background: var(--mem); }
   .rate { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .rate .d { color: var(--accent); }
+  .rate .d { color: var(--accent-text); }
   .rate .u { color: var(--up); }
-  .soon { border-style: dashed; border-color: rgba(255, 255, 255, 0.2); background: transparent; align-items: center; justify-content: center; text-align: center; color: var(--text-2); font-size: 13px; }
+  .soon { border-style: dashed; border-color: var(--line); background: transparent; align-items: center; justify-content: center; text-align: center; color: var(--text-2); font-size: 13px; }
   .soon span { font-size: 11px; color: var(--text-3); }
 
   .footer { display: flex; align-items: center; justify-content: center; gap: 10px; position: relative; }
-  .move-btn { position: absolute; z-index: 2; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 9px; color: var(--text-2); background: rgba(255, 255, 255, 0.06); }
+  .move-btn { position: absolute; z-index: 2; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 9px; color: var(--text-2); background: var(--surface); }
   .attach-btn { right: 48px; }
-  .move-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.16); }
+  .move-btn:hover { color: var(--text); background: var(--hover-2); }
   .footer .name { font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-3); }
   .dots { display: flex; gap: 5px; }
-  .dots span { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); display: block; transition: width 200ms ease, background 200ms ease; }
-  .dots span.on { width: 18px; background: #fff; }
+  .dots span { width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); display: block; transition: width 200ms ease, background 200ms ease; }
+  .dots span.on { width: 18px; background: var(--text); }
+  body.light #glow { opacity: 0.22; }
+
+  /* Appearance */
+  .ap-section { display: flex; flex-direction: column; gap: 8px; }
+  .ap-title { font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-3); }
+  .ap-note { font-size: 12px; color: var(--text-3); }
+  .theme-seg { align-self: flex-start; }
+  .theme-seg button { min-width: 64px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .sw { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--line); }
+  .sw:hover { transform: scale(1.08); }
+  .sw[aria-checked="true"] { border-color: var(--panel); box-shadow: 0 0 0 2px var(--text); }
+  .sw.auto { background: conic-gradient(#ffffff 0 50%, #1a1d26 0 100%); }
+  .hue { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 5px; margin: 4px 0 0; outline: 0;
+    background: linear-gradient(90deg, hsl(0 75% 68%), hsl(60 75% 68%), hsl(120 75% 68%), hsl(180 75% 68%), hsl(240 75% 68%), hsl(300 75% 68%), hsl(360 75% 68%)); }
+  .hue::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid rgba(0, 0, 0, 0.45); cursor: pointer; }
+  /* Fixed backdrop: desktop lyrics sit on the wallpaper, so this shows them as they'll look there. */
+  .preview { border-radius: 14px; padding: 14px 16px; background: linear-gradient(135deg, #2b3a55, #5a3d6e); display: flex; flex-direction: column; align-items: flex-end; gap: 3px; text-shadow: var(--lyr-shadow); color: var(--lyr-text); }
+  .preview .p-side { font-size: 12px; opacity: 0.7; }
+  .preview .p-cur { font-size: 18px; font-weight: 700; }
+  .preview .sung { color: var(--lyr-hi); }
 </style>
 </head>
 <body data-page="music">
@@ -176,7 +197,7 @@
       <span id="place-label">Lyrics</span>
       <div style="display: flex; align-items: center; gap: 8px">
         <button id="customize" class="text-btn">Customize</button>
-        <div class="seg" role="radiogroup" aria-labelledby="place-label">
+        <div class="seg place-seg" role="radiogroup" aria-labelledby="place-label">
           <button role="radio" data-place="off">Off</button>
           <button role="radio" data-place="desktop">Desktop</button>
           <button role="radio" data-place="taskbar">Taskbar</button>
@@ -190,7 +211,7 @@
       <div class="card stat">
         <div class="top"><span>CPU</span><span id="cores"></span></div>
         <span class="big"><span id="cpu">0</span><small>%</small></span>
-        <svg id="spark" viewBox="0 0 140 28" preserveAspectRatio="none" aria-hidden="true"><polyline id="spark-line" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"></polyline></svg>
+        <svg id="spark" viewBox="0 0 140 28" preserveAspectRatio="none" aria-hidden="true"><polyline id="spark-line" fill="none" stroke="var(--accent-text)" stroke-width="2" stroke-linejoin="round"></polyline></svg>
       </div>
       <div class="card stat">
         <div class="top"><span>Memory</span><span id="mem-gb"></span></div>
@@ -209,9 +230,39 @@
     </div>
   </div>
 
+  <div id="page-appearance" class="page" role="group" aria-label="Appearance">
+    <div class="ap-section">
+      <span class="ap-title">Theme</span>
+      <div class="seg theme-seg" role="radiogroup" aria-label="Theme">
+        <button role="radio" data-theme="auto">Auto</button>
+        <button role="radio" data-theme="dark">Dark</button>
+        <button role="radio" data-theme="light">Light</button>
+      </div>
+      <span id="theme-note" class="ap-note"></span>
+    </div>
+    <div class="ap-section">
+      <span class="ap-title">Accent</span>
+      <div id="accent-sw" class="swatches" role="radiogroup" aria-label="Accent colour"></div>
+      <input id="accent-hue" class="hue" type="range" min="0" max="360" step="1" aria-label="Custom accent colour (hue)">
+    </div>
+    <div class="ap-section">
+      <span class="ap-title">Lyrics text</span>
+      <div id="ltext-sw" class="swatches" role="radiogroup" aria-label="Lyrics text colour"></div>
+    </div>
+    <div class="ap-section">
+      <span class="ap-title">Lyrics highlight</span>
+      <div id="lhi-sw" class="swatches" role="radiogroup" aria-label="Lyrics highlight colour"></div>
+    </div>
+    <div class="preview" aria-hidden="true">
+      <span class="p-side">City lights are fading slow</span>
+      <span class="p-cur"><span class="sung">Hold the note</span> and let it go</span>
+      <span class="p-side">Every echo finds its way home</span>
+    </div>
+  </div>
+
   <div class="footer">
     <span id="page-name" class="name">Now playing</span>
-    <div class="dots" aria-hidden="true"><span id="dot-music" class="on"></span><span id="dot-system"></span></div>
+    <div class="dots" aria-hidden="true"><span id="dot-music" class="on"></span><span id="dot-system"></span><span id="dot-appearance"></span></div>
   </div>
   <button id="attach-pill" class="move-btn attach-btn" aria-label="Move kRon into the calendar flyout" title="Move kRon off the taskbar and into the calendar flyout"></button>
   <button id="move-pill" class="move-btn" aria-label="Move the pill" title="Move the pill (drag it anywhere)"></button>

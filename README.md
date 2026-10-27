@@ -88,6 +88,14 @@ The buttons on the panel's lyrics card help with this:
 | Folder | Opens your lyrics folder |
 | Reload | Forgets the saved copy and looks the track up again |
 
+### Themes and colours
+
+The hover panel has a third page, **Appearance** (use the side arrows):
+
+- **Theme:** **Auto** follows your Windows taskbar, so text is dark on a light taskbar and light on a dark one, and kRon switches when you change Windows' theme. Or force **Dark** or **Light**.
+- **Accent colour:** six presets plus a slider for any hue. If a colour would be hard to read on the current background, kRon darkens or lightens it for text.
+- **Lyrics text and highlight colours:** set the colour of the lyrics and of the words being sung. A preview shows how they'll look.
+
 ### Moving the pill
 
 Click the six-dot move icon in the top-right corner of the hover panel (or choose **Move pill…** from the tray menu), then drag the pill by its handle anywhere on the screen. **Reset** puts it back beside the tray, and **Done** locks it. The position is remembered.

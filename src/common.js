@@ -30,14 +30,85 @@
     artwork: '',
     lyrics: { track_key: '', status: 'idle', lines: [] },
     stats: { cpu: 0, cores: 0, cpu_history: [], mem_used: 0, mem_total: 0, down: 0, up: 0 },
-    settings: { lyrics_on: true, page: 'music', pill_side: '', dock_on: false, lyr_place: 'desktop', lyr_scale: 1, lyr_lines: 3, lyr_backdrop: false, lyr_offset_ms: 0, lyr_dx: 0, lyr_dy: 0 },
+    settings: { lyrics_on: true, page: 'music', pill_side: '', dock_on: false, theme_mode: 'auto', accent: '#7fe0c6', lyr_text: '', lyr_hi: '', lyr_place: 'desktop', lyr_scale: 1, lyr_lines: 3, lyr_backdrop: false, lyr_offset_ms: 0, lyr_dx: 0, lyr_dy: 0 },
     flyoutOpen: false,
     overlayEdit: false,
     pillEdit: false,
     dockShown: false,
+    taskbarLight: false,
   };
+  // ---- theme: light / dark surface, accent and lyric colours, with readable contrast ----
+  const hexToRgb = (h) => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(h || '');
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  const rgbToHex = (r, g, b) => '#' + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+  const luminance = (rgb) => {
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+  };
+  const contrast = (a, b) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const rgbToHsl = ([r, g, b]) => {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+    if (mx === mn) return [0, 0, l];
+    const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    const h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h * 60, s, l];
+  };
+  const hslToRgb = ([h, s, l]) => {
+    const k = (n) => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return [f(0) * 255, f(8) * 255, f(4) * 255];
+  };
+  /** `color` nudged lighter or darker until it's readable (4.5:1) on the surface `bg`. */
+  const readableOn = (color, bg) => {
+    const c = hexToRgb(color), b = hexToRgb(bg);
+    if (!c || !b || contrast(c, b) >= 4.5) return color;
+    const [h, s, l] = rgbToHsl(c);
+    const dir = luminance(b) > 0.5 ? -1 : 1;
+    for (let i = 1; i <= 40; i++) {
+      const next = hslToRgb([h, s, Math.max(0, Math.min(1, l + dir * i * 0.025))]);
+      if (contrast(next, b) >= 4.5) return rgbToHex(...next);
+    }
+    return dir < 0 ? '#000000' : '#ffffff';
+  };
+
+  function applyTheme() {
+    const s = state.settings;
+    const light = s.theme_mode === 'light' || (s.theme_mode !== 'dark' && state.taskbarLight);
+    document.body.classList.toggle('light', light);
+    const surface = light ? '#f4f5f8' : '#14161e';
+    const accent = hexToRgb(s.accent) ? s.accent : '#7fe0c6';
+    const ar = hexToRgb(accent);
+    const lyrText = hexToRgb(s.lyr_text) ? s.lyr_text : '#ffffff';
+    const lyrHi = hexToRgb(s.lyr_hi) ? s.lyr_hi : accent;
+    const darkText = luminance(hexToRgb(lyrText)) < 0.4;
+    const set = (k, v) => document.documentElement.style.setProperty(k, v);
+    set('--accent', accent);
+    set('--accent-soft', `rgba(${ar[0]}, ${ar[1]}, ${ar[2]}, 0.18)`);
+    set('--accent-ink', luminance(ar) > 0.4 ? '#0d1a16' : '#ffffff'); // text on accent-filled buttons
+    set('--accent-text', readableOn(accent, surface)); // accent used as text on the current surface
+    set('--hi-ui', readableOn(lyrHi, surface)); // lyric highlight inside kRon's own windows
+    set('--lyr-text', lyrText); // desktop lyrics sit on the wallpaper, so these are used as chosen
+    set('--lyr-hi', lyrHi);
+    set('--lyr-shadow', darkText
+      ? '0 0 1px rgba(255,255,255,0.9), 0 1px 3px rgba(255,255,255,0.7), 0 0 18px rgba(255,255,255,0.45)'
+      : '0 0 1px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8), 0 0 18px rgba(0,0,0,0.5)');
+    set('--lyr-backdrop', darkText ? 'rgba(245,246,250,0.6)' : 'rgba(10,12,18,0.42)');
+  }
+
   const subs = [];
-  const notify = (what) => subs.forEach((f) => f(state, what));
+  const notify = (what) => {
+    if (what === 'all' || what === 'settings' || what === 'sys_theme') applyTheme();
+    subs.forEach((f) => f(state, what));
+  };
 
   const K = {
     state,
@@ -55,6 +126,7 @@
       listen('overlay_edit', (e) => { state.overlayEdit = e.payload; notify('overlay_edit'); });
       listen('pill_edit', (e) => { state.pillEdit = e.payload; notify('pill_edit'); });
       listen('dock_vis', (e) => { state.dockShown = e.payload; notify('dock_vis'); });
+      listen('sys_theme', (e) => { state.taskbarLight = e.payload; notify('sys_theme'); });
       notify('all');
     },
     cmd(action, ms) {
@@ -82,6 +154,21 @@
     },
     setOverlayEdit(on) { invoke('set_overlay_edit', { on }); },
     setPillEdit(on) { invoke('set_pill_edit', { on }); },
+    /** Theme: { mode, accent, lyrText, lyrHi, save }. Empty lyrText / lyrHi = automatic. */
+    setTheme(p) {
+      const s = state.settings;
+      if (p.mode !== undefined) s.theme_mode = p.mode;
+      if (p.accent !== undefined) s.accent = p.accent;
+      if (p.lyrText !== undefined) s.lyr_text = p.lyrText;
+      if (p.lyrHi !== undefined) s.lyr_hi = p.lyrHi;
+      notify('settings'); // optimistic
+      invoke('set_theme', {
+        mode: p.mode ?? null, accent: p.accent ?? null,
+        lyrText: p.lyrText ?? null, lyrHi: p.lyrHi ?? null, save: p.save ?? true,
+      });
+    },
+    hslToHex(h, s, l) { return rgbToHex(...hslToRgb([h, s, l])); },
+    hexToHsl(hex) { const c = hexToRgb(hex); return c ? rgbToHsl(c) : [160, 0.7, 0.7]; },
     /** Drag the pill by (dx, dy) logical px; `commit` when the drag ends so it's saved. */
     movePillBy(dx, dy, commit) { invoke('move_pill_by', { dx, dy, commit: !!commit }); },
     resetPill() { invoke('reset_pill'); },

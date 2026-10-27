@@ -33,6 +33,13 @@ pub struct Settings {
     pub pill_side: String,
     /// Show a now-playing card above the Windows notification centre while it's open.
     pub dock_on: bool,
+    /// "auto" follows the Windows taskbar theme; "dark" / "light" force it.
+    pub theme_mode: String,
+    /// Accent colour, "#rrggbb".
+    pub accent: String,
+    /// Desktop lyrics colours, "#rrggbb"; empty = automatic (white text, accent highlight).
+    pub lyr_text: String,
+    pub lyr_hi: String,
     /// Where lyrics show when on: "desktop" (overlay) | "taskbar" (one line in the pill).
     pub lyr_place: String,
     /// Desktop lyrics text size multiplier.
@@ -58,6 +65,10 @@ impl Default for Settings {
             pill_y: 0.0,
             pill_side: String::new(),
             dock_on: false,
+            theme_mode: "auto".into(),
+            accent: "#7fe0c6".into(),
+            lyr_text: String::new(),
+            lyr_hi: String::new(),
             lyr_place: "desktop".into(),
             lyr_scale: 1.0,
             lyr_lines: 3,
@@ -87,6 +98,8 @@ pub struct SharedInner {
     pub flyout_h: Mutex<f64>,
     pub overlay_h: Mutex<f64>,
     pub dock_h: Mutex<f64>,
+    /// The Windows taskbar is using the light theme (so kRon's text must be dark on it).
+    pub taskbar_light: AtomicBool,
     /// The Windows notification centre is open: its window handle and where its first card starts (px, 0 = unknown).
     pub dock_open: AtomicBool,
     pub dock_hwnd: AtomicIsize,
@@ -165,6 +178,7 @@ fn get_state(shared: tauri::State<Shared>) -> serde_json::Value {
         "settings": *shared.settings.lock().unwrap(),
         "overlayEdit": shared.overlay_edit.load(std::sync::atomic::Ordering::Relaxed),
         "pillEdit": shared.pill_edit.load(std::sync::atomic::Ordering::Relaxed),
+        "taskbarLight": shared.taskbar_light.load(std::sync::atomic::Ordering::Relaxed),
     })
 }
 
@@ -189,7 +203,7 @@ fn set_lyrics_on(app: AppHandle, on: bool) {
 
 #[tauri::command]
 fn set_page(app: AppHandle, page: String) {
-    if page == "music" || page == "system" {
+    if matches!(page.as_str(), "music" | "system" | "appearance") {
         update_settings(&app, |s| s.page = page);
     }
 }
@@ -300,6 +314,37 @@ fn overlay_size(shared: tauri::State<Shared>, h: f64) {
     *shared.overlay_h.lock().unwrap() = h.clamp(80.0, 900.0);
 }
 
+/// "#rrggbb" only.
+fn valid_hex(s: &str) -> bool {
+    s.len() == 7 && s.starts_with('#') && s[1..].chars().all(|c| c.is_ascii_hexdigit())
+}
+
+/// Theme settings. An empty `lyr_text` / `lyr_hi` means automatic; `save: false` while a slider is being dragged.
+#[tauri::command]
+fn set_theme(
+    app: AppHandle,
+    mode: Option<String>,
+    accent: Option<String>,
+    lyr_text: Option<String>,
+    lyr_hi: Option<String>,
+    save: Option<bool>,
+) {
+    update_settings_opt(&app, save.unwrap_or(true), |s| {
+        if let Some(v) = mode.filter(|m| matches!(m.as_str(), "auto" | "dark" | "light")) {
+            s.theme_mode = v;
+        }
+        if let Some(v) = accent.filter(|a| valid_hex(a)) {
+            s.accent = v;
+        }
+        if let Some(v) = lyr_text.filter(|c| c.is_empty() || valid_hex(c)) {
+            s.lyr_text = v;
+        }
+        if let Some(v) = lyr_hi.filter(|c| c.is_empty() || valid_hex(c)) {
+            s.lyr_hi = v;
+        }
+    });
+}
+
 #[tauri::command]
 fn set_dock_on(app: AppHandle, on: bool) {
     update_settings(&app, |s| s.dock_on = on);
@@ -394,6 +439,7 @@ fn main() {
             set_lyr,
             set_overlay_edit,
             set_pill_edit,
+            set_theme,
             move_pill_by,
             reset_pill,
             overlay_size,
@@ -425,6 +471,7 @@ fn main() {
                 flyout_h: Mutex::new(520.0),
                 overlay_h: Mutex::new(200.0),
                 dock_h: Mutex::new(150.0),
+                taskbar_light: AtomicBool::new(shell::taskbar_is_light()),
                 dock_open: AtomicBool::new(false),
                 dock_hwnd: AtomicIsize::new(0),
                 dock_top: AtomicI32::new(0),
