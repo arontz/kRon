@@ -292,12 +292,22 @@ fn current_track(app: &AppHandle) -> Option<MediaSnapshot> {
     snap.active.then_some(snap)
 }
 
+/// Opens a web address in the user's default browser. (`explorer.exe <url>` can open a File Explorer window instead.)
+pub fn open_url(url: &str) {
+    use windows::core::{w, HSTRING};
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+    unsafe {
+        ShellExecuteW(None, w!("open"), &HSTRING::from(url), None, None, SW_SHOWNORMAL);
+    }
+}
+
 /// Google the current track's lyrics in the default browser.
 pub fn search_web(app: &AppHandle) {
     let Some(snap) = current_track(app) else { return };
     let q = format!("{} {} lrc lyrics", snap.artist, snap.title);
     if let Ok(url) = reqwest::Url::parse_with_params("https://www.google.com/search", &[("q", q.trim())]) {
-        let _ = Command::new("explorer.exe").arg(url.as_str()).spawn();
+        open_url(url.as_str());
     }
 }
 

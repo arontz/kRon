@@ -1,6 +1,5 @@
 //! "Check for updates…": asks GitHub for the latest release and, if it's newer, offers to open its download page.
 
-use std::process::Command;
 
 use windows::core::HSTRING;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -79,7 +78,7 @@ pub fn check_for_updates() {
             Outcome::Newer { version, url } => {
                 let ask = format!("kRon {version} is available (you have {VERSION}).\n\nOpen the download page?");
                 if message(&ask, true, false) {
-                    let _ = Command::new("explorer.exe").arg(url).spawn();
+                    crate::lyrics::open_url(&url);
                 }
             }
             Outcome::Failed => {
