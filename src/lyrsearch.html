@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search for lyrics</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { overflow: hidden; height: 100%; }
+  body { background: #1c1e26; cursor: default; }
+  body.light { background: #f3f4f7; }
+  .win { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 16px; -webkit-user-select: text; user-select: text; }
+
+  form.top { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
+  .fields { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+  input[type="text"] {
+    height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--text); font: inherit; font-size: 14px; outline: 0;
+  }
+  input[type="text"]:focus { border-color: var(--accent-text); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  #status { font-size: 13px; color: var(--text-2); min-height: 18px; flex: 1; min-width: 160px; }
+  #status.err { color: #ff7b7b; }
+  body.light #status.err { color: #b42318; }
+  label.chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+
+  .btn { height: 32px; padding: 0 16px; border-radius: 6px; font-size: 13px; border: 1px solid var(--line-strong); background: var(--card); color: var(--text); }
+  .btn:hover:not(:disabled) { background: var(--hover); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+  .btn:focus-visible, .rows-wrap:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+  .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(250px, 1fr); grid-template-rows: minmax(0, 1fr); gap: 16px; }
+  .rows-wrap { overflow: auto; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); outline: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 600; padding: 8px 8px; border-bottom: 1px solid var(--line-strong); cursor: pointer; white-space: nowrap; color: var(--text-2); }
+  thead th:hover { color: var(--text); }
+  thead th[aria-sort="ascending"]::after { content: ' ▲'; font-size: 9px; }
+  thead th[aria-sort="descending"]::after { content: ' ▼'; font-size: 9px; }
+  tbody td { padding: 7px 8px; border-bottom: 1px solid var(--line); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tbody tr:hover { background: var(--hover); }
+  tbody tr[aria-selected="true"] { background: var(--accent-soft); }
+  tbody tr[aria-selected="true"] td:first-child { box-shadow: inset 3px 0 0 var(--accent-text); }
+  .yes { color: var(--accent-text); font-weight: 600; }
+  .empty { padding: 28px 16px; color: var(--text-3); font-size: 13px; text-align: center; }
+
+  .preview { border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); display: flex; flex-direction: column; min-height: 0; }
+  .preview h2 { margin: 0; padding: 8px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--line); }
+  #preview { margin: 0; padding: 10px 12px; overflow: auto; flex: 1; font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+  #preview.hint { color: var(--text-3); font-family: inherit; }
+
+  .bottom { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  #target { flex: 1; font-size: 12.5px; color: var(--text-2); min-width: 0; }
+  #target b { color: var(--text); font-weight: 600; }
+  .bottom .btn { min-width: 84px; }
+</style>
+</head>
+<body>
+<div class="win">
+  <form id="form" class="top" autocomplete="off">
+    <div class="fields">
+      <label class="f">Title<input id="f-title" type="text" spellcheck="false"></label>
+      <label class="f">Album<input id="f-album" type="text" spellcheck="false"></label>
+      <label class="f">Artist<input id="f-artist" type="text" spellcheck="false"></label>
+    </div>
+    <div class="actions">
+      <button id="search" type="submit" class="btn primary">Search</button>
+      <span id="status" role="status"></span>
+      <button id="web" type="button" class="btn">Search the web</button>
+    </div>
+  </form>
+
+  <div class="main">
+    <div id="rows-wrap" class="rows-wrap" tabindex="0" aria-label="Results">
+      <table role="grid">
+        <thead>
+          <tr>
+            <th data-key="title" scope="col">Title</th>
+            <th data-key="album" scope="col">Album</th>
+            <th data-key="artist" scope="col">Artist</th>
+            <th data-key="source" scope="col">Source</th>
+            <th data-key="synced" scope="col">Is timestamped?</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="empty">Search to see results.</div>
+    </div>
+    <section class="preview" aria-label="Preview">
+      <h2>Preview</h2>
+      <pre id="preview" class="hint">Pick a result to preview it here.</pre>
+    </section>
+  </div>
+
+  <div class="bottom">
+    <span id="target"></span>
+    <button id="ok" type="button" class="btn primary">OK</button>
+    <button id="cancel" type="button" class="btn">Cancel</button>
+    <button id="apply" type="button" class="btn">Apply</button>
+  </div>
+</div>
+<script src="common.js"></script>
+<script src="lyrsearch.js"></script>
+</body>
+</html>

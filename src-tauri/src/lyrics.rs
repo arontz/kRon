@@ -322,6 +322,15 @@ pub fn add_or_edit(app: &AppHandle) {
     let _ = Command::new("notepad.exe").arg(path).spawn();
 }
 
+/// Writes `content` as the lyrics file for `snap` ("Artist - Title.lrc" if it has timestamps, else ".txt") and returns
+/// the file name. The other extension is left alone, but a synced .lrc always wins over a .txt when both exist.
+pub fn save_local(app: &AppHandle, snap: &MediaSnapshot, content: &str, synced: bool) -> Result<String, String> {
+    let dir = lyrics_dir(app).ok_or("Couldn't open the lyrics folder")?;
+    let name = format!("{}.{}", base_name(snap), if synced { "lrc" } else { "txt" });
+    std::fs::write(dir.join(&name), content.replace("\r\n", "\n")).map_err(|e| e.to_string())?;
+    Ok(name)
+}
+
 pub fn open_folder(app: &AppHandle) {
     if let Some(dir) = lyrics_dir(app) {
         let _ = Command::new("explorer.exe").arg(dir).spawn();

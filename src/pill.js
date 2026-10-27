@@ -16,8 +16,6 @@
 
   // ---- one-line lyrics on the taskbar ----
   let lyricKey = null;
-  let lyricSung = -1;
-  let lyricWords = [];
   let scrollTimer = null;
 
   function lyricMode(s) {
@@ -41,11 +39,9 @@
     if (force || key !== lyricKey) {
       const changed = lyricKey !== null && key !== lyricKey;
       lyricKey = key;
-      lyricSung = -1;
       // Before the first line, show the track instead of an empty row.
       const line = idx >= 0 ? K.lineText(idx) : `${s.media.title}`;
-      lyricWords = line.split(/(\s+)/);
-      text.innerHTML = lyricWords.map((w) => `<span>${K.esc(w)}</span>`).join('');
+      text.textContent = line;
       text.title = line;
       $('lyric-sub').textContent = [s.media.title, s.media.artist].filter(Boolean).join(' · ');
       if (changed) {
@@ -67,14 +63,6 @@
           text.style.transition = `transform ${Math.max(1200, dur * 0.75 - 700)}ms linear`;
           text.style.transform = `translateX(${-overflow - 8}px)`;
         }, 700);
-      }
-    }
-
-    if (idx >= 0) {
-      const sung = Math.ceil(K.lineProgress(idx, pos) * lyricWords.length);
-      if (sung !== lyricSung) {
-        lyricSung = sung;
-        text.querySelectorAll('span').forEach((el, i) => el.classList.toggle('sung', i < sung));
       }
     }
   }

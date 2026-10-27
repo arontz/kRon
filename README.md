@@ -83,10 +83,24 @@ The buttons on the panel's lyrics card help with this:
 
 | Button | What it does |
 |---|---|
-| Search | Googles the lyrics for the current track |
+| Search | Opens the **Search for lyrics** window (below) |
 | Add / Edit | Creates the lyrics file for the current track and opens it in Notepad |
 | Folder | Opens your lyrics folder |
 | Reload | Forgets the saved copy and looks the track up again |
+
+### Search for lyrics
+
+The magnifier on the lyrics card (or **Search for lyrics…** in the tray menu) opens a search window:
+
+- Title, Album and Artist are filled in from the song that's playing; edit them and search again.
+- Results from several sources are listed with an **Is timestamped?** column, so you can pick synced lyrics. Click a result to preview it on the right.
+- **Apply** saves the lyrics for the song that's playing and kRon switches to them straight away; **OK** does the same and closes the window.
+- Sources: **QQ Music** and **LRCLIB**, searched together, with timestamped results first. LRCLIB is an open, official service. QQ Music is not an official public service, so it may stop working or not allow this use.
+- **Search the web** opens a normal web search if nothing matches.
+
+If a song has no lyrics, a faint **No lyrics found · Search** hint appears where the desktop lyrics would be. Point at it and click to open this window.
+
+Saved lyrics are plain files in your lyrics folder, so you can open and edit them later with the + / edit button.
 
 ### Themes and colours
 

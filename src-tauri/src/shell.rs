@@ -28,7 +28,6 @@ const CLOSE_DELAY: Duration = Duration::from_millis(300);
 /// How long the card's fly-out animation runs before its window is hidden.
 const DOCK_OUT: Duration = Duration::from_millis(240);
 pub const FLYOUT_W: f64 = 440.0;
-const OVERLAY_W: f64 = 680.0;
 /// Dragging the pill this close to a side edge docks it there as a vertical column…
 const DOCK_SNAP: f64 = 24.0;
 /// …and it takes this much further drag away from the edge to undock it again.
@@ -421,7 +420,7 @@ pub fn run(app: AppHandle) {
             };
             // Anchored by its bottom-right corner so the text grows up and left.
             let ov_h = px(*shared.overlay_h.lock().unwrap());
-            let ov_w = px(OVERLAY_W);
+            let ov_w = px(*shared.overlay_w.lock().unwrap());
             let want_ov = Rect {
                 x: (tb.bar.right - ov_w - px(28.0) + px(dx)).clamp(tb.bar.left, tb.bar.right - ov_w),
                 y: (tb.bar.top - ov_h - px(20.0) + px(dy)).max(0),
@@ -460,14 +459,22 @@ pub fn run(app: AppHandle) {
                     pill_rect = want_pill;
                 }
 
-                let show_ov = {
+                // "No lyrics found - Search" hint: shown instead of lyrics, and clickable, so the window takes the mouse.
+                let (lyrics_ready, hinting) = {
                     let s = shared.settings.lock().unwrap();
                     let l = shared.lyrics.lock().unwrap();
-                    editing || (s.lyrics_on && s.lyr_place == "desktop" && l.status == "synced" && !l.lines.is_empty() && !open)
+                    let active = shared.media.lock().unwrap().active;
+                    let on = s.lyrics_on && s.lyr_place == "desktop" && !open;
+                    (
+                        on && l.status == "synced" && !l.lines.is_empty(),
+                        on && active && matches!(l.status.as_str(), "none" | "plain" | "error"),
+                    )
                 };
-                if editing != ov_interactive {
-                    let _ = overlay.set_ignore_cursor_events(!editing);
-                    ov_interactive = editing;
+                let show_ov = editing || lyrics_ready || (hinting && !editing);
+                let interactive = editing || hinting;
+                if interactive != ov_interactive {
+                    let _ = overlay.set_ignore_cursor_events(!interactive);
+                    ov_interactive = interactive;
                 }
                 if show_ov && (!ov_shown || want_ov != ov_rect || periodic) {
                     place(h_ov, want_ov);

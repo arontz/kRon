@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod lyrics;
+mod lyrsearch;
 mod media;
 mod shell;
 mod stats;
@@ -96,6 +97,7 @@ pub struct SharedInner {
     /// Drag distance (logical px) from the pill's handle that the shell thread hasn't applied yet.
     pub pill_move: Mutex<PillMove>,
     pub flyout_h: Mutex<f64>,
+    pub overlay_w: Mutex<f64>,
     pub overlay_h: Mutex<f64>,
     pub dock_h: Mutex<f64>,
     /// The Windows taskbar is using the light theme (so kRon's text must be dark on it).
@@ -266,7 +268,8 @@ fn set_overlay_edit(app: AppHandle, on: bool) {
 #[tauri::command]
 fn lyrics_action(app: AppHandle, action: String) {
     match action.as_str() {
-        "search" => lyrics::search_web(&app),
+        "search" => lyrsearch::open_window(&app),
+        "search_web" => lyrics::search_web(&app),
         "add" => lyrics::add_or_edit(&app),
         "folder" => lyrics::open_folder(&app),
         "reload" => lyrics::reload(&app),
@@ -310,8 +313,9 @@ fn reset_pill(app: AppHandle) {
 }
 
 #[tauri::command]
-fn overlay_size(shared: tauri::State<Shared>, h: f64) {
-    *shared.overlay_h.lock().unwrap() = h.clamp(80.0, 900.0);
+fn overlay_size(shared: tauri::State<Shared>, w: f64, h: f64) {
+    *shared.overlay_w.lock().unwrap() = w.clamp(120.0, 900.0);
+    *shared.overlay_h.lock().unwrap() = h.clamp(40.0, 900.0);
 }
 
 /// "#rrggbb" only.
@@ -373,6 +377,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let off = CheckMenuItem::with_id(app, "lyr_off", "Lyrics off", true, false, None::<&str>)?;
     let desktop = CheckMenuItem::with_id(app, "lyr_desktop", "Lyrics on desktop", true, false, None::<&str>)?;
     let taskbar = CheckMenuItem::with_id(app, "lyr_taskbar", "Lyrics on taskbar", true, false, None::<&str>)?;
+    let search_lyrics = MenuItem::with_id(app, "search_lyrics", "Search for lyrics…", true, None::<&str>)?;
     let customize = MenuItem::with_id(app, "customize", "Customize lyrics…", true, None::<&str>)?;
     let move_pill = MenuItem::with_id(app, "move_pill", "Move pill…", true, None::<&str>)?;
     let dock = CheckMenuItem::with_id(app, "dock", "Show in calendar flyout (hide from taskbar)", true, false, None::<&str>)?;
@@ -382,7 +387,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let quit = MenuItem::with_id(app, "quit", "Quit kRon", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&off, &desktop, &taskbar, &customize, &move_pill, &dock, &sep2, &autostart, &check_update, &version, &sep, &quit])?;
+    let menu = Menu::with_items(app, &[&off, &desktop, &taskbar, &search_lyrics, &customize, &move_pill, &dock, &sep2, &autostart, &check_update, &version, &sep, &quit])?;
 
     let autostart_item = autostart.clone();
     TrayIconBuilder::with_id("kron")
@@ -391,6 +396,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         .menu(&menu)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "lyr_off" => update_settings(app, |s| s.lyrics_on = false),
+            "search_lyrics" => lyrsearch::open_window(app),
             "move_pill" => {
                 update_settings(app, |s| s.dock_on = false);
                 set_pill_edit_inner(app, true);
@@ -446,6 +452,10 @@ fn main() {
             dock_size,
             set_dock_on,
             lyrics_action,
+            lyrsearch::lyrics_search,
+            lyrsearch::lyrics_fetch,
+            lyrsearch::lyrics_apply,
+            lyrsearch::close_lyrics_search,
             pill_size,
             flyout_size
         ])
@@ -469,6 +479,7 @@ fn main() {
                 pill_h: Mutex::new(40.0),
                 pill_move: Mutex::new(PillMove::default()),
                 flyout_h: Mutex::new(520.0),
+                overlay_w: Mutex::new(680.0),
                 overlay_h: Mutex::new(200.0),
                 dock_h: Mutex::new(150.0),
                 taskbar_light: AtomicBool::new(shell::taskbar_is_light()),

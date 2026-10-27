@@ -2,6 +2,12 @@
 
 Each release's notes on GitHub come from the matching section below. Add a new `## vX.Y.Z` section on top before tagging a release.
 
+## v0.4.0
+
+- **Search for lyrics window.** The magnifier button on the lyrics card (and **Search for lyrics…** in the tray menu) now opens its own window, like foobar2000's: edit Title / Album / Artist, search several sources at once, see which results are timestamped, preview the lyrics, then **Apply** or **OK** to save them for the song that's playing. Results come from QQ Music and LRCLIB at once, timestamped ones first (QQ Music isn't an official public service, so it may stop working). **Search the web** is still there as a button in the window.
+- **"No lyrics found · Search" hint.** When a song has no lyrics, a faint hint shows on the desktop where the lyrics would be; click it to open the search window.
+- **The line being sung is highlighted as a whole**, in your highlight colour, on the desktop and in the taskbar lyric line. (Highlighting word by word needs word-level timing, which lyric files don't have.)
+
 ## v0.3.0
 
 - **Themes.** New **Appearance** page in the hover panel (use the side arrows). **Auto** follows your Windows taskbar: dark text on a light taskbar, light text on a dark one, and it switches when you change Windows' theme. Or force **Dark** / **Light**.
