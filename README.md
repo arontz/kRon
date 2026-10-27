@@ -73,6 +73,8 @@ kRon looks in this order:
 2. **Its saved copy** of lyrics it already downloaded
 3. **[LRCLIB](https://lrclib.net)**, a free, open database of synced lyrics
 
+That automatic lookup uses LRCLIB only. If it finds nothing, or the wrong version, use **Search for lyrics** (below): it also searches **QQ Music**, and what you apply is saved as your own file, which then comes first.
+
 Name a file `Artist - Title.lrc` (or `.txt`, or just `Title.lrc`) and kRon uses it, picking up edits within a few seconds. Synced lines look like this:
 
 ```
@@ -210,4 +212,4 @@ src/
 
 ## Credits
 
-Lyrics from [LRCLIB](https://lrclib.net). Inspired by [Nusa](https://rama2555.github.io/nusa/).
+Lyrics from [LRCLIB](https://lrclib.net) and, in the search window, QQ Music. kRon isn't affiliated with either. Inspired by [Nusa](https://rama2555.github.io/nusa/).
