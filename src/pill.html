@@ -22,14 +22,14 @@
   .mode { display: none; align-items: center; gap: 2px; }
   body[data-page="music"] #music, body[data-page="system"] #system { display: flex; }
   body.moving #music, body.moving #system { display: none; }
-  body.moving #pill { background: var(--panel); border-color: var(--line-strong); border-style: dashed; justify-content: center; }
+  body.moving #pill { background: var(--panel); border-color: var(--line-strong); border-style: dashed; }
 
   /* Move mode */
   #move { display: none; align-items: center; gap: 4px; padding: 0 2px; font-size: 12px; color: var(--text-2); }
-  body.moving #move { display: flex; }
+  body.moving #move { display: flex; flex: 1; align-self: stretch; }
   #grip { width: 40px; height: 32px; border-radius: 8px; cursor: grab; touch-action: none; color: var(--text); background: var(--hover); }
   #grip:active { cursor: grabbing; }
-  #move .txt { margin: 0 8px 0 4px; }
+  #move .txt { margin: 0 8px 0 4px; flex: 1; white-space: nowrap; }
   #move .btn { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
   #move .btn:hover { background: var(--hover); }
   #pill-done { background: var(--accent); color: var(--accent-ink); }
@@ -74,6 +74,7 @@
   body.vertical .meter .row { flex-direction: column; align-items: center; gap: 0; font-size: 10px; }
   body.vertical .net { min-width: 0; align-items: center; font-size: 10px; gap: 2px; }
   body.vertical #move .txt { display: none; }
+  body.vertical #move { justify-content: space-around; }
   body.vertical #move .btn { width: 44px; padding: 0; }</style>
 </head>
 <body data-page="music">
