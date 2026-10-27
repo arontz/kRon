@@ -152,11 +152,10 @@
   K.on((s, what) => {
     if (what === 'stats') return;
     renderTarget(s);
-    // Start from the song that's playing.
+    // Start from the song that's playing. The album stays empty: matching on it hides other versions of the song.
     if (!filled && s.media.active) {
       filled = true;
       $('f-title').value = s.media.title;
-      $('f-album').value = s.media.album;
       $('f-artist').value = s.media.artist;
       search();
     }

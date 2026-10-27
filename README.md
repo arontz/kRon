@@ -94,7 +94,7 @@ The buttons on the panel's lyrics card help with this:
 
 The magnifier on the lyrics card (or **Search for lyrics…** in the tray menu) opens a search window:
 
-- Title, Album and Artist are filled in from the song that's playing; edit them and search again.
+- Title and Artist are filled in from the song that's playing; edit them and search again. Album is left empty (it can hide other versions of the song), but you can type one to narrow the results.
 - Results from several sources are listed with an **Is timestamped?** column, so you can pick synced lyrics. Click a result to preview it on the right.
 - **Apply** saves the lyrics for the song that's playing and kRon switches to them straight away; **OK** does the same and closes the window.
 - Sources: **QQ Music** and **LRCLIB**, searched together, with timestamped results first. LRCLIB is an open, official service. QQ Music is not an official public service, so it may stop working or not allow this use.

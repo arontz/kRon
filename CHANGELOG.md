@@ -2,6 +2,10 @@
 
 Each release's notes on GitHub come from the matching section below. Add a new `## vX.Y.Z` section on top before tagging a release.
 
+## Next
+
+- **The search window fills in only Title and Artist.** Album is left empty so more versions of the song match; type one if you want to narrow it down.
+
 ## v0.4.1
 
 - **Desktop lyrics stay visible while the hover panel is open.** They used to disappear when you pointed at the pill; now the panel opens in front of them.
