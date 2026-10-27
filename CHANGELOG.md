@@ -2,10 +2,10 @@
 
 Each release's notes on GitHub come from the matching section below. Add a new `## vX.Y.Z` section on top before tagging a release.
 
-## Next
+## v0.4.1
 
 - **Desktop lyrics stay visible while the hover panel is open.** They used to disappear when you pointed at the pill; now the panel opens in front of them.
-- **The move bar is as long as the pill.** In Move pill mode the bar used to be shorter than the real pill, so the pill ended up somewhere else when you pressed Done; now they take the same space.
+- **The move bar is as long as the pill.** In Move pill mode the bar used to be shorter than the real pill, so the pill ended up somewhere else when you pressed Done; now they take the same space. Dragging the pill to a side edge while moving also works properly, giving a narrow column.
 - **New logo:** an equalizer whose lit segments spell kR, with a plain k and a mint-highlighted R, like the lyrics highlight.
 
 ## v0.4.0
