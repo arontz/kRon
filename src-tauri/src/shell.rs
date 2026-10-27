@@ -464,7 +464,7 @@ pub fn run(app: AppHandle) {
                     let s = shared.settings.lock().unwrap();
                     let l = shared.lyrics.lock().unwrap();
                     let active = shared.media.lock().unwrap().active;
-                    let on = s.lyrics_on && s.lyr_place == "desktop" && !open;
+                    let on = s.lyrics_on && s.lyr_place == "desktop";
                     (
                         on && l.status == "synced" && !l.lines.is_empty(),
                         on && active && matches!(l.status.as_str(), "none" | "plain" | "error"),
@@ -476,7 +476,7 @@ pub fn run(app: AppHandle) {
                     let _ = overlay.set_ignore_cursor_events(!interactive);
                     ov_interactive = interactive;
                 }
-                if show_ov && (!ov_shown || want_ov != ov_rect || periodic) {
+                if show_ov && (!ov_shown || want_ov != ov_rect || (periodic && !open)) {
                     place(h_ov, want_ov);
                     ov_rect = want_ov;
                     ov_shown = true;
@@ -532,7 +532,7 @@ pub fn run(app: AppHandle) {
                 }
             }
 
-            if open && (want_fly != fly_rect || !is_above(h_fly, tb.hwnd)) {
+            if open && (want_fly != fly_rect || !is_above(h_fly, tb.hwnd) || (ov_shown && !is_above(h_fly, h_ov))) {
                 place(h_fly, want_fly);
                 fly_rect = want_fly;
             }
