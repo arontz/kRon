@@ -124,6 +124,17 @@
     document.body.classList.toggle('open', s.flyoutOpen);
     // The move bar takes the same space as the pill it stands in for, so where you drop it is where the pill ends up.
     // Measured before the pill's content is swapped out.
+    // Docking to a side edge (or leaving it) changes the pill's shape, so the size locked for the old shape is replaced
+    // by the new shape's real size: show the real pill for a moment (no repaint happens in between), measure, restore.
+    if (s.pillEdit && wasMoving && vertical !== wasVertical) {
+      const pill = $('pill');
+      pill.style.minWidth = '';
+      pill.style.minHeight = '';
+      document.body.classList.remove('moving');
+      const r = pill.getBoundingClientRect();
+      pill.style.minWidth = `${Math.ceil(r.width)}px`;
+      pill.style.minHeight = `${Math.ceil(r.height)}px`;
+    }
     if (s.pillEdit !== wasMoving) {
       const pill = $('pill');
       if (s.pillEdit) {
