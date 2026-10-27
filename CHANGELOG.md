@@ -2,6 +2,10 @@
 
 Each release's notes on GitHub come from the matching section below. Add a new `## vX.Y.Z` section on top before tagging a release.
 
+## Next
+
+- **New logo:** an equalizer whose lit segments spell kR, with a plain k and a mint-highlighted R, like the lyrics highlight.
+
 ## v0.4.0
 
 - **Search for lyrics window.** The magnifier button on the lyrics card (and **Search for lyrics…** in the tray menu) now opens its own window, like foobar2000's: edit Title / Album / Artist, search several sources at once, see which results are timestamped, preview the lyrics, then **Apply** or **OK** to save them for the song that's playing. Results come from QQ Music and LRCLIB at once, timestamped ones first (QQ Music isn't an official public service, so it may stop working). **Search the web** is still there as a button in the window.
