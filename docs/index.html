@@ -21,6 +21,7 @@ KronDemo.configure('fm',    { settings: { lyr_place: 'desktop' }, flyoutOpen: tr
 KronDemo.configure('fs',    { settings: { page: 'system' }, flyoutOpen: true, track: 2, position_ms: 26000 });
 KronDemo.configure('fa',    { settings: { page: 'appearance' }, flyoutOpen: true, track: 1, position_ms: 31500 });
 KronDemo.configure('ov',    { settings: { lyr_place: 'desktop', lyr_lines: 5, lyr_scale: 0.85 }, track: 0, position_ms: 34000 });
+KronDemo.configure('miss',  { flyoutOpen: true, playlist: [3, 4], track: 0, position_ms: 0, settings: { lyr_place: 'desktop' } });
 KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop' } });
 </script>
 </head>
@@ -66,13 +67,14 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
 </section>
 
 <section class="showcase" id="showcase" aria-labelledby="h-look">
+ <div class="pin-inner" id="pin-inner">
   <div class="frame">
     <div class="head">
       <h2 id="h-look" class="t-head">Every part, running.</h2>
       <div class="cap" aria-live="polite"><h3 id="cap-name">Now playing, on the pill</h3><p id="cap-text">Album art, title, artist and the controls, always in sight next to the tray.</p></div>
     </div>
   </div>
-  <div class="row" id="row" tabindex="0" aria-label="kRon's parts. Scroll sideways to light one up.">
+  <div class="row" id="row" tabindex="0" aria-label="kRon's parts. Keep scrolling down to move through them, or use the arrow keys.">
     <div class="item lit" data-name="Now playing, on the pill" data-text="Album art, title, artist and the controls, always in sight next to the tray.">
       <div class="tile small" data-ui><iframe class="live" title="Pill showing the current track" data-src="demo/pill.html?hub=pm" width="340" height="40"></iframe></div>
     </div>
@@ -95,6 +97,7 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
       <div class="tile desk" data-ui><div class="win"></div><iframe class="live" title="Desktop lyrics" data-src="demo/overlay.html?hub=ov" width="680" height="200"></iframe></div>
     </div>
   </div>
+ </div>
 </section>
 
 <section class="features frame" id="features" aria-labelledby="h-feat">
@@ -160,7 +163,36 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
     <div class="rail"><div class="track"></div><div class="fill" id="fill"></div>
       <input type="range" id="steps" min="0" max="3" step="1" value="0" aria-label="Step through how kRon works" aria-valuetext="Play">
     </div>
-    <div class="names" id="names"><span class="on">Play</span><span>Hover</span><span>Read along</span><span>Make it yours</span></div>
+    <div class="names" id="names"><span class="on">Play</span><span>Hover</span><span>Sing along</span><span>Make it yours</span></div>
+  </div>
+</section>
+
+<section class="missing frame grid" id="missing" aria-labelledby="h-miss">
+  <div class="lhs">
+    <h2 id="h-miss" class="t-head" data-rise>No lyrics? Find them, or write your own.</h2>
+    <ol class="steps" data-rise style="--i:1">
+      <li>kRon looks in your own files, then in what it saved, then on LRCLIB.</li>
+      <li>Nothing yet? Press the magnifier in the panel. It searches LRCLIB and QQ Music, and you pick the version that fits.</li>
+      <li>Still nothing? Press + and write them yourself. Put a time before each line, save, and kRon sings along.</li>
+    </ol>
+    <p class="try" data-rise style="--i:2"><b>Try it.</b> Both songs here start with no lyrics. Press the magnifier on the first one. Then press next for the second, and press +.</p>
+  </div>
+  <div class="rhs">
+    <div class="mstage">
+      <div class="mfly" data-ui><iframe class="live" title="Hover panel for a song with no lyrics" data-src="demo/flyout.html?hub=miss" width="440" height="463"></iframe></div>
+      <div class="mwin" id="mwin">
+        <p class="mhint" id="mhint">The search window and your lyrics file open here.</p>
+        <div class="sim" id="sim-search" hidden>
+          <div class="simbar"><span>Search for lyrics</span><button type="button" class="simclose" data-close>Close</button></div>
+          <div class="simbody" id="simbody"><iframe id="searchframe" title="Search for lyrics window" width="1000" height="600"></iframe></div>
+        </div>
+        <div class="sim" id="sim-edit" hidden>
+          <div class="simbar"><span id="edit-title">Lyrics file</span><button type="button" class="simclose" data-close>Close</button></div>
+          <textarea id="editor" spellcheck="false" aria-label="Lyrics file"></textarea>
+          <div class="simfoot"><button type="button" class="btn" id="save">Save</button><span id="edit-status" role="status">In the app this opens in Notepad. Save, and kRon picks the file up.</span></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
