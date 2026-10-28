@@ -47,7 +47,7 @@
   });
 
   // Entrances: heading, then text, then picture, once. Rows and list items stagger within their group.
-  $$('.trust h2, .trust .txt > *, .foot > *, .showcase h2, .showcase .cap').forEach((el) => {
+  $$('.showcase h2, .showcase .cap').forEach((el) => {
     el.setAttribute('data-rise', '');
     const sibs = [...el.parentElement.children];
     el.style.setProperty('--i', Math.min(sibs.indexOf(el), 6));
@@ -88,28 +88,53 @@
   row.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(nearest); }, { passive: true });
   // The row is pinned while the page scrolls: each pixel of vertical scroll moves the row one pixel sideways,
   // so the page stays on this section until the last part is reached, then carries on down.
-  const pin = $('#showcase'), inner = $('#pin-inner');
-  let travel = 0;
+  // Clicking the section (or its button) pauses that: the page scrolls on normally and the row stays where it is.
+  // Clicking again picks the sideways scroll back up from the same part.
+  const pin = $('#showcase'), inner = $('#pin-inner'), pinBtn = $('#pin-toggle');
+  let travel = 0, paused = false;
+  const innerTop = () => Number.parseFloat(inner.style.top || '0');
+  const pinTop = () => pin.getBoundingClientRect().top + scrollY;
   function measure() {
     travel = Math.max(0, row.scrollWidth - row.clientWidth);
-    pin.style.height = `${inner.offsetHeight + travel}px`;
+    pin.style.height = `${inner.offsetHeight + (paused ? 0 : travel)}px`;
     // If the pinned content is taller than the window, pin its bottom edge instead of cutting it off.
     inner.style.top = `${Math.min(0, innerHeight - inner.offsetHeight)}px`;
     follow();
   }
   function follow() {
-    const top = pin.getBoundingClientRect().top - Number.parseFloat(inner.style.top || '0');
+    if (paused) return;
+    const top = pin.getBoundingClientRect().top - innerTop();
     row.scrollLeft = Math.max(0, Math.min(travel, -top));
   }
+  function setPaused(on) {
+    if (on === paused) return;
+    const left = row.scrollLeft;
+    const inView = pin.getBoundingClientRect().top <= 0;
+    paused = on;
+    pin.classList.toggle('paused', on);
+    pinBtn.setAttribute('aria-pressed', String(on));
+    pinBtn.textContent = on ? 'Resume sideways scroll' : 'Pause sideways scroll';
+    measure();
+    row.scrollLeft = left;
+    // Keep the section exactly where it is on screen: paused, the page sits at the section's top;
+    // resumed, it sits at the point of the pinned run that matches the part on show.
+    if (inView || !on) scrollTo({ top: pinTop() - innerTop() + (on ? 0 : left), behavior: 'instant' });
+  }
+  pinBtn.addEventListener('click', (e) => { e.stopPropagation(); setPaused(!paused); });
+  pin.addEventListener('click', (e) => {
+    if (e.target.closest('.item, button, a')) return;
+    setPaused(!paused);
+  });
   addEventListener('scroll', follow, { passive: true });
   addEventListener('resize', measure);
   addEventListener('load', measure);
   measure();
-  // Moving to a part means scrolling the page to where that part is centred.
+  // Moving to a part: scroll the page to where that part is centred, or, while paused, the row itself.
   function centre(el, smooth) {
-    const left = el.offsetLeft - row.offsetLeft - (row.clientWidth - el.offsetWidth) / 2;
-    const y = pin.getBoundingClientRect().top + scrollY - Number.parseFloat(inner.style.top || '0') + Math.max(0, Math.min(travel, left));
-    scrollTo({ top: y, behavior: smooth && !reduced ? 'smooth' : 'auto' });
+    const left = Math.max(0, Math.min(travel, el.offsetLeft - row.offsetLeft - (row.clientWidth - el.offsetWidth) / 2));
+    const behavior = smooth && !reduced ? 'smooth' : 'instant';
+    if (paused) row.scrollTo({ left, behavior });
+    else scrollTo({ top: pinTop() - innerTop() + left, behavior });
   }
   items.forEach((el) => el.addEventListener('click', () => { if (el !== lit) centre(el, true); }));
   row.addEventListener('keydown', (e) => {
@@ -119,17 +144,32 @@
   });
   requestAnimationFrame(() => measure());
 
-  // Lyrics missing: the panel's magnifier and + open a search window (kRon's real one) or a lyrics file to write.
-  const mwin = $('#mwin'), mhint = $('#mhint'), simSearch = $('#sim-search'), simEdit = $('#sim-edit');
+  // Lyrics missing: a small desktop. The search window (kRon's real one) and the lyrics file open as windows on it.
+  const desk = $('#desk'), simSearch = $('#sim-search'), simEdit = $('#sim-edit');
   const sframe = $('#searchframe'), editor = $('#editor'), editStatus = $('#edit-status'), simBody = $('#simbody');
-  function showPanel(which) {
-    mhint.hidden = !!which;
-    simSearch.hidden = which !== 'search';
-    simEdit.hidden = which !== 'edit';
+  function fitSearch() {
+    // As large as the desktop allows, never above the window's real size.
+    const s = Math.min(1, (desk.clientWidth - 48) / 1000, (desk.clientHeight - 48 - 44) / 600);
+    simBody.style.setProperty('--s', String(Math.max(0.4, s)));
+    simBody.style.setProperty('--sw', `${Math.round(1000 * Math.max(0.4, s))}px`);
   }
-  function fitSearch() { simBody.style.setProperty('--s', String(simBody.clientWidth / 1000)); } // phones: see the CSS, the window scrolls at a readable size instead
-  new ResizeObserver(fitSearch).observe(simBody);
-  KronDemo.ui.openSearch = () => { showPanel('search'); fitSearch(); sframe.src = sframe.dataset.url; mwin.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); };
+  new ResizeObserver(fitSearch).observe(desk);
+  function openWin(win) {
+    for (const w of [simSearch, simEdit]) if (w !== win && !w.hidden) closeWin(w, true);
+    clearTimeout(win._t);
+    win.hidden = false;
+    win.classList.remove('shut');
+    void win.offsetWidth;
+    win.classList.add('open');
+    if (desk.getBoundingClientRect().top < 0 || desk.getBoundingClientRect().bottom > innerHeight) desk.scrollIntoView({ block: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
+  }
+  function closeWin(win, instant) {
+    if (win.hidden) return;
+    win.classList.remove('open');
+    win.classList.add('shut');
+    win._t = setTimeout(() => { win.hidden = true; win.classList.remove('shut'); if (win === simSearch) sframe.removeAttribute('src'); }, instant || reduced ? 0 : 180);
+  }
+  KronDemo.ui.openSearch = () => { fitSearch(); sframe.src = sframe.dataset.url; openWin(simSearch); };
   KronDemo.ui.openEditor = (id, hub) => {
     const s = hub.song();
     const sample = s.key === 'lantern-season'
@@ -138,11 +178,10 @@
     $('#edit-title').textContent = `${s.artist} - ${s.title}.lrc`;
     editor.value = `[ar:${s.artist}]\n[ti:${s.title}]\n[al:${s.album}]\n# Paste lyrics below and save. Synced lines look like: [01:23.45] words\n\n${sample}`;
     editStatus.textContent = 'In the app this opens in Notepad. Edit the lines, then save, and kRon picks the file up.';
-    showPanel('edit');
-    mwin.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+    openWin(simEdit);
   };
-  KronDemo.ui.closePanel = () => { showPanel(''); sframe.removeAttribute('src'); };
-  $$('[data-close]').forEach((b) => b.addEventListener('click', () => KronDemo.ui.closePanel()));
+  KronDemo.ui.closePanel = () => closeWin(simSearch);
+  $$('[data-close]').forEach((b) => b.addEventListener('click', () => closeWin(b.closest('.dwin'))));
   $('#save').addEventListener('click', () => {
     const name = KronDemo.hub('miss').applyLyrics(editor.value);
     editStatus.textContent = name ? `Saved as \u201c${name}\u201d. kRon is using it now.` : 'No lyrics found in that file. Add lines like [00:10.00] words.';
