@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="app-icon.svg" alt="kRon logo" width="110" />
+
 # kRon
 
 **Music, synced lyrics and a system overview, right on the Windows taskbar.**
@@ -213,7 +215,9 @@ src/
 
 ## Support
 
-If kRon is useful to you, you can support its development on [Ko-fi](https://ko-fi.com/kronzo).
+If kRon is useful to you, you can support its development on Ko-fi.
+
+<a href="https://ko-fi.com/kronzo" target="_blank"><img height="36" style="border:0px;height:36px;" src="https://storage.ko-fi.com/cdn/kofi3.png?v=3" alt="Support me on Ko-fi" /></a>
 
 ## Credits
 
