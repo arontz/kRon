@@ -13,6 +13,31 @@
     toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
   });
 
+  // Download count: the installer downloads of every release, from the public GitHub API. Shown only once it passes
+  // DL_MIN, kept for an hour so repeat visits don't use up GitHub's 60-requests-an-hour allowance, and left out quietly
+  // if GitHub can't be reached.
+  const DL_MIN = 100;
+  (async () => {
+    const el = $('#dlcount');
+    let total = null;
+    try {
+      const saved = JSON.parse(localStorage.getItem('kron-dl') || 'null');
+      if (saved && Date.now() - saved.at < 3600000) total = saved.total;
+    } catch (e) { /* storage blocked: just ask GitHub */ }
+    if (total === null) {
+      try {
+        const r = await fetch('https://api.github.com/repos/arontz/kRon/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' } });
+        if (!r.ok) return;
+        const releases = await r.json();
+        total = releases.flatMap((rel) => rel.assets || []).filter((a) => /\.(exe|msi)$/i.test(a.name)).reduce((n, a) => n + (a.download_count || 0), 0);
+        try { localStorage.setItem('kron-dl', JSON.stringify({ total, at: Date.now() })); } catch (e) { /* fine without it */ }
+      } catch (e) { return; }
+    }
+    if (total < DL_MIN) return;
+    el.innerHTML = `<span>${total.toLocaleString('en-US')}</span> downloads so far`;
+    el.hidden = false;
+  })();
+
   // Demo frames below the fold load when they get near the screen.
   const lazy = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
