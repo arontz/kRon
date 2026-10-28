@@ -9,8 +9,8 @@
 <meta property="og:title" content="kRon: music and lyrics on your taskbar">
 <meta property="og:description" content="A small pill next to your Windows system tray that shows what's playing, with synced lyrics. Free and open source.">
 <script>document.documentElement.classList.add('js');</script>
-<link rel="stylesheet" href="site.css">
-<script src="demo/hub.js"></script>
+<link rel="stylesheet" href="site.css?v=16b237e11b">
+<script src="demo/hub.js?v=16b237e11b"></script>
 <script>
 // Each demo frame below runs kRon's real interface files against its own sample player (see demo/hub.js).
 KronDemo.configure('main',  { flyoutOpen: true, settings: { lyr_place: 'taskbar' } });
@@ -22,7 +22,6 @@ KronDemo.configure('fs',    { settings: { page: 'system' }, flyoutOpen: true, tr
 KronDemo.configure('fa',    { settings: { page: 'appearance' }, flyoutOpen: true, track: 1, position_ms: 31500 });
 KronDemo.configure('ov',    { settings: { lyr_place: 'desktop', lyr_lines: 5, lyr_scale: 0.85 }, track: 0, position_ms: 34000 });
 KronDemo.configure('miss',  { flyoutOpen: true, playlist: [3, 4], track: 0, position_ms: 0, settings: { lyr_place: 'desktop' } });
-KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop' } });
 </script>
 </head>
 <body>
@@ -53,15 +52,15 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
       <a class="btn" href="https://github.com/arontz/kRon/releases/latest">Download for Windows</a>
       <p class="fine">Free and open source. Windows 10 and 11.</p>
     </div>
+    <p class="note" data-rise style="--i:3"><b>This is kRon itself,</b> running here with sample songs. Press play, drag the seek bar, click a lyric, or switch the panel&rsquo;s page with the side arrows.</p>
   </div>
   <div class="stage" id="stage">
-    <p class="note"><b>This is kRon itself,</b> running here with sample songs. Press play, drag the seek bar, click a lyric, or switch the panel&rsquo;s page with the side arrows.</p>
     <div class="panelwrap" data-ui>
-      <iframe class="live" title="kRon hover panel, running with sample data" src="demo/flyout.html?hub=main" width="440" height="463"></iframe>
+      <iframe class="live" title="kRon hover panel, running with sample data" src="demo/flyout.html?hub=main&amp;v=16b237e11b" width="440" height="463"></iframe>
     </div>
     <div class="tbar" data-ui>
       <span class="apps" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span class="tray"><iframe class="live" title="kRon pill, running with sample data" src="demo/pill.html?hub=main" width="340" height="40"></iframe><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></span>
+      <span class="tray"><iframe class="live" title="kRon pill, running with sample data" src="demo/pill.html?hub=main&amp;v=16b237e11b" width="340" height="40"></iframe><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></span>
     </div>
   </div>
 </section>
@@ -76,25 +75,25 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
   </div>
   <div class="row" id="row" tabindex="0" aria-label="kRon's parts. Keep scrolling down to move through them, or use the arrow keys.">
     <div class="item lit" data-name="Now playing, on the pill" data-text="Album art, title, artist and the controls, always in sight next to the tray.">
-      <div class="tile small" data-ui><iframe class="live" title="Pill showing the current track" data-src="demo/pill.html?hub=pm" width="340" height="40"></iframe></div>
+      <div class="tile small" data-ui><iframe class="live" title="Pill showing the current track" data-src="demo/pill.html?hub=pm&amp;v=16b237e11b" width="340" height="40"></iframe></div>
     </div>
     <div class="item" data-name="Lyrics on the pill" data-text="The current line replaces the title. Long lines scroll sideways while they are sung.">
-      <div class="tile small" data-ui><iframe class="live" title="Pill showing the current lyric line" data-src="demo/pill.html?hub=pl" width="340" height="40"></iframe></div>
+      <div class="tile small" data-ui><iframe class="live" title="Pill showing the current lyric line" data-src="demo/pill.html?hub=pl&amp;v=16b237e11b" width="340" height="40"></iframe></div>
     </div>
     <div class="item" data-name="System, on the pill" data-text="Switch the pill to a CPU, memory and network readout.">
-      <div class="tile small" data-ui><iframe class="live" title="Pill showing system stats" data-src="demo/pill.html?hub=ps" width="340" height="40"></iframe></div>
+      <div class="tile small" data-ui><iframe class="live" title="Pill showing system stats" data-src="demo/pill.html?hub=ps&amp;v=16b237e11b" width="340" height="40"></iframe></div>
     </div>
     <div class="item flyout" data-name="The hover panel" data-text="Seek, shuffle, repeat, and three lines of lyrics you can click to jump to that part of the song.">
-      <div data-ui><iframe class="live" title="Hover panel, now playing page" data-src="demo/flyout.html?hub=fm" width="440" height="463"></iframe></div>
+      <div data-ui><iframe class="live" title="Hover panel, now playing page" data-src="demo/flyout.html?hub=fm&amp;v=16b237e11b" width="440" height="463"></iframe></div>
     </div>
     <div class="item flyout" data-name="The system page" data-text="A live CPU graph, memory used, and download and upload speed.">
-      <div data-ui><iframe class="live" title="Hover panel, system page" data-src="demo/flyout.html?hub=fs" width="440" height="274"></iframe></div>
+      <div data-ui><iframe class="live" title="Hover panel, system page" data-src="demo/flyout.html?hub=fs&amp;v=16b237e11b" width="440" height="274"></iframe></div>
     </div>
     <div class="item flyout" data-name="Make it match" data-text="Dark or light, your accent colour, and your own lyric colours.">
-      <div data-ui><iframe class="live" title="Hover panel, appearance page" data-src="demo/flyout.html?hub=fa" width="440" height="463"></iframe></div>
+      <div data-ui><iframe class="live" title="Hover panel, appearance page" data-src="demo/flyout.html?hub=fa&amp;v=16b237e11b" width="440" height="463"></iframe></div>
     </div>
     <div class="item" data-name="Lyrics on the desktop" data-text="Three or five lines in the corner with no background. Sung words light up, and clicks pass through.">
-      <div class="tile desk" data-ui><div class="win"></div><iframe class="live" title="Desktop lyrics" data-src="demo/overlay.html?hub=ov" width="680" height="200"></iframe></div>
+      <div class="tile desk" data-ui><div class="win"></div><iframe class="live" title="Desktop lyrics" data-src="demo/overlay.html?hub=ov&amp;v=16b237e11b" width="680" height="200"></iframe></div>
     </div>
   </div>
  </div>
@@ -148,25 +147,6 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
   </div>
 </section>
 
-<section class="how" aria-labelledby="clause">
-  <div class="split">
-    <div class="left">
-      <h2 id="clause" aria-live="polite">Play anything, anywhere.</h2>
-    </div>
-    <div class="right">
-      <div class="slot on" data-i="0"><div class="tile" data-ui><iframe class="live" title="Pill" data-src="demo/pill.html?hub=steps" width="340" height="40"></iframe></div></div>
-      <div class="slot" data-i="1"><div data-ui><iframe class="live" title="Hover panel" data-src="demo/flyout.html?hub=steps" width="440" height="463"></iframe></div></div>
-      <div class="slot" data-i="2"><div class="tile desk" data-ui style="width:min(560px,100%)"><div class="win"></div><iframe class="live" title="Desktop lyrics" data-src="demo/overlay.html?hub=steps" width="680" height="200"></iframe></div></div>
-    </div>
-  </div>
-  <div class="ctrl">
-    <div class="rail"><div class="track"></div><div class="fill" id="fill"></div>
-      <input type="range" id="steps" min="0" max="3" step="1" value="0" aria-label="Step through how kRon works" aria-valuetext="Play">
-    </div>
-    <div class="names" id="names"><span class="on">Play</span><span>Hover</span><span>Sing along</span><span>Make it yours</span></div>
-  </div>
-</section>
-
 <section class="missing frame grid" id="missing" aria-labelledby="h-miss">
   <div class="lhs">
     <h2 id="h-miss" class="t-head" data-rise>No lyrics? Find them, or write your own.</h2>
@@ -179,12 +159,12 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
   </div>
   <div class="rhs">
     <div class="mstage">
-      <div class="mfly" data-ui><iframe class="live" title="Hover panel for a song with no lyrics" data-src="demo/flyout.html?hub=miss" width="440" height="463"></iframe></div>
+      <div class="mfly" data-ui><iframe class="live" title="Hover panel for a song with no lyrics" data-src="demo/flyout.html?hub=miss&amp;v=16b237e11b" width="440" height="463"></iframe></div>
       <div class="mwin" id="mwin">
         <p class="mhint" id="mhint">The search window and your lyrics file open here.</p>
         <div class="sim" id="sim-search" hidden>
           <div class="simbar"><span>Search for lyrics</span><button type="button" class="simclose" data-close>Close</button></div>
-          <div class="simbody" id="simbody"><iframe id="searchframe" title="Search for lyrics window" width="1000" height="600"></iframe></div>
+          <div class="simbody" id="simbody"><iframe id="searchframe" title="Search for lyrics window" data-url="demo/lyrsearch.html?hub=miss&amp;v=16b237e11b" width="1000" height="600"></iframe></div>
           <p class="simnote">This window is built for a desktop screen. On a phone, scroll it sideways and down to reach OK.</p>
         </div>
         <div class="sim" id="sim-edit" hidden>
@@ -266,6 +246,6 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
 
 <div id="toast" role="status" aria-live="polite" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:var(--accent-ink);padding:14px 20px;font-size:16px;max-width:min(520px,90vw);opacity:0;pointer-events:none;transition:opacity 200ms linear"></div>
 
-<script src="site.js"></script>
+<script src="site.js?v=16b237e11b"></script>
 </body>
 </html>
