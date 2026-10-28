@@ -109,7 +109,9 @@ ul, ol { padding: 0; list-style: none; }
 .showcase .pin-inner { position: sticky; top: 0; padding-block: 32px 20px; }
 .showcase .head { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); }
 .showcase h2 { grid-column: 1 / 8; }
-.showcase .cap { grid-column: 1 / 8; margin-top: 16px; min-height: 104px; }
+.showcase .cap { grid-column: 1 / 8; margin-top: 16px; }
+/* The caption keeps the height of its longest text (site.js measures it), so the row never moves when it changes. */
+#cap-live { min-height: var(--cap-h, 120px); }
 .showcase .cap h3 { font-size: 24px; font-weight: 400; letter-spacing: -0.01em; }
 .showcase .cap p { margin-top: 8px; font-size: 18px; max-width: 46ch; }
 @media (max-width: 900px) { .showcase h2, .showcase .cap { grid-column: 1 / -1; } }
@@ -135,6 +137,9 @@ ul, ol { padding: 0; list-style: none; }
   .tile.desk { width: 86vw; height: 360px; }
   .item { max-width: 86vw; }
   .item.flyout .live { zoom: 0.8; }
+  .row .item.flyout > [data-ui] { height: 372px; }
+  .row .stand { height: 200px; }
+  .row .tile.desk { height: 300px; }
 }
 
 /* features: an explorer. The preview on the left shows whichever part is lit in the table on the right. */
@@ -216,8 +221,10 @@ ul, ol { padding: 0; list-style: none; }
 .missing .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 8px; font-weight: 650; color: var(--accent); }
 .missing .try { margin-top: 20px; font-size: 18px; line-height: 1.5; max-width: 52ch; color: var(--soft); }
 .missing .try b { color: var(--ink); font-weight: 650; }
-.desk { position: relative; height: 640px; background: var(--ground-3); overflow: hidden; }
-.desk .live { max-width: none; }
+.ldesk { position: relative; height: 640px; background: var(--ground-3); overflow: hidden; }
+.dreset { position: absolute; top: 16px; right: 16px; z-index: 4; min-height: 44px; padding: 0 18px; background: #10131a; color: var(--ink); border: 0; font-size: 16px; font-weight: 650; cursor: pointer; }
+.dreset:hover { background: #232a38; }
+.ldesk .live { max-width: none; }
 .dover { position: absolute; left: 32px; right: 600px; top: 24px; bottom: 80px; display: flex; align-items: center; justify-content: center; }
 .dfly { position: absolute; right: calc(32px + 60px); bottom: 64px; height: 464px; display: flex; align-items: flex-end; }
 .dbar { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: #10131a; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 24px; }
@@ -248,7 +255,7 @@ ul, ol { padding: 0; list-style: none; }
 @media (max-width: 1080px) { .mhead h2, .mhead .mtext { grid-column: 1 / -1; } }
 /* Narrow: the desktop stacks its parts; windows cover it, and the search window scrolls at a readable size. */
 @media (max-width: 760px) {
-  .desk { height: auto; padding: 20px 0 56px; display: flex; flex-direction: column; align-items: center; gap: 20px; min-height: 720px; }
+  .ldesk { height: auto; padding: 20px 0 56px; display: flex; flex-direction: column; align-items: center; gap: 20px; min-height: 720px; }
   .dover, .dfly { position: static; inset: auto; }
   .dfly { height: 372px; }
   .dfly iframe { zoom: 0.8; }
@@ -273,18 +280,6 @@ ul, ol { padding: 0; list-style: none; }
 .pinbtn:hover { color: var(--ink); }
 .showcase.paused .row { overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--accent) var(--ground-3); }
 .showcase { cursor: default; }
-
-/* install */
-.install { padding-block: 140px 40px; }
-.install .lhs { grid-column: 1 / 6; }
-.install .lhs .btn { margin-top: 28px; }
-.install .rhs { grid-column: 7 / 13; }
-.install ol { counter-reset: s; }
-.install ol li { font-size: 24px; line-height: 1.3; padding: 16px 0 16px 44px; position: relative; }
-.install ol li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 16px; font-weight: 650; color: var(--accent); }
-.install .warn { margin-top: 32px; background: var(--ground-2); padding: 24px; font-size: 18px; line-height: 1.5; }
-.install .warn b { font-weight: 650; }
-@media (max-width: 900px) { .install .lhs, .install .rhs { grid-column: 1 / -1; } .install .rhs { margin-top: 24px; } }
 
 /* questions: everything visible, nothing to hunt for */
 .faq { padding-block: 140px 0; }
@@ -313,7 +308,8 @@ ul, ol { padding: 0; list-style: none; }
 .fcol li + li { margin-top: 10px; }
 .fcol a { text-decoration: none; }
 .fcol a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
-.fword { margin-top: 96px; font-size: clamp(96px, 24vw, 420px); line-height: 0.8; font-weight: 650; letter-spacing: -0.05em; color: #161b24; user-select: none; }
+.fword { margin-top: 96px; font-size: clamp(96px, 24vw, 420px); line-height: 0.8; font-weight: 650; letter-spacing: -0.05em; color: var(--accent); user-select: none; }
+.fword .k { color: #161b24; } /* the k is silent */
 .fbottom { margin-top: 32px; display: flex; justify-content: space-between; gap: 12px 32px; flex-wrap: wrap; color: var(--soft); font-size: 16px; }
 @media (max-width: 1080px) {
   .fbrand { grid-column: 1 / -1; }
@@ -325,6 +321,13 @@ ul, ol { padding: 0; list-style: none; }
   .fcol, .fcol:first-of-type { grid-column: span 6; }
   .fcols { margin-top: 80px; }
 }
+
+/* back to top: appears once the footer is on screen */
+.totop { position: fixed; right: var(--margin); bottom: 24px; z-index: 20; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px; background: var(--accent); color: var(--accent-ink); font-weight: 650; text-decoration: none; opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 200ms var(--ease), transform 200ms var(--ease); }
+.totop::before { content: ""; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid currentColor; }
+.totop.show { opacity: 1; transform: none; pointer-events: auto; }
+.totop:hover { background: #a3ecd8; }
+@media (prefers-reduced-motion: reduce) { .totop { transition: none; } }
 
 /* motion: entrances and the shutter on the stage */
 .js [data-rise] { opacity: 0; transform: translateY(24px); transition: opacity 600ms var(--ease), transform 600ms var(--ease); transition-delay: calc(var(--i, 0) * 80ms); }
