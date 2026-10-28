@@ -104,24 +104,6 @@
   });
   requestAnimationFrame(() => measure());
 
-  // How it goes: one slider drives the clause and the fragment.
-  const CLAUSES = ['Play anything, anywhere.', 'Hover to open the panel.', 'Sing along on your desktop.', 'Make it match yours.'];
-  const NAMES = ['Play', 'Hover', 'Sing along', 'Make it yours'];
-  const SLOT = [0, 1, 2, 1];
-  const steps = $('#steps'), clause = $('#clause'), fill = $('#fill');
-  const names = $$('#names span'), slots = $$('.how .slot');
-  function step() {
-    const i = Number(steps.value);
-    clause.textContent = CLAUSES[i];
-    names.forEach((n, k) => n.classList.toggle('on', k === i));
-    slots.forEach((s, k) => s.classList.toggle('on', k === SLOT[i]));
-    steps.setAttribute('aria-valuetext', NAMES[i]);
-    fill.style.width = `calc(${(i / 3) * 100}% - ${(i / 3) * 32}px + 16px)`;
-    KronDemo.hub('steps').invoke('set_page', { page: i === 3 ? 'appearance' : 'music' });
-  }
-  steps.addEventListener('input', step);
-  step();
-
   // Lyrics missing: the panel's magnifier and + open a search window (kRon's real one) or a lyrics file to write.
   const mwin = $('#mwin'), mhint = $('#mhint'), simSearch = $('#sim-search'), simEdit = $('#sim-edit');
   const sframe = $('#searchframe'), editor = $('#editor'), editStatus = $('#edit-status'), simBody = $('#simbody');
@@ -132,7 +114,7 @@
   }
   function fitSearch() { simBody.style.setProperty('--s', String(simBody.clientWidth / 1000)); } // phones: see the CSS, the window scrolls at a readable size instead
   new ResizeObserver(fitSearch).observe(simBody);
-  KronDemo.ui.openSearch = () => { showPanel('search'); fitSearch(); sframe.src = 'demo/lyrsearch.html?hub=miss'; mwin.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); };
+  KronDemo.ui.openSearch = () => { showPanel('search'); fitSearch(); sframe.src = sframe.dataset.url; mwin.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); };
   KronDemo.ui.openEditor = (id, hub) => {
     const s = hub.song();
     const sample = s.key === 'lantern-season'
