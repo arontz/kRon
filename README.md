@@ -219,6 +219,10 @@ If kRon is useful to you, you can support its development on Ko-fi.
 
 <a href="https://ko-fi.com/kronzo" target="_blank"><img height="36" style="border:0px;height:36px;" src="https://storage.ko-fi.com/cdn/kofi3.png?v=3" alt="Support me on Ko-fi" /></a>
 
+## License
+
+MIT. See [LICENSE](LICENSE).
+
 ## Credits
 
 Lyrics from [LRCLIB](https://lrclib.net) and, in the search window, QQ Music. kRon isn't affiliated with either. Inspired by [Nusa](https://rama2555.github.io/nusa/).

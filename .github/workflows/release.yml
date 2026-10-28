@@ -51,12 +51,76 @@ jobs:
 
       - run: npm ci
 
+      # Build only. Publishing happens below, after the (optional) signing step.
       - uses: tauri-apps/tauri-action@v0
+        id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Locate installer
+        id: installer
+        shell: pwsh
+        env:
+          ARTIFACT_PATHS: ${{ steps.build.outputs.artifactPaths }}
+        run: |
+          $setup = ($env:ARTIFACT_PATHS | ConvertFrom-Json) | Where-Object { $_ -like '*-setup.exe' } | Select-Object -First 1
+          if (-not $setup) { throw "No *-setup.exe in build artifacts: $env:ARTIFACT_PATHS" }
+          "path=$setup" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      # Code signing through SignPath (https://signpath.org). Skipped until the SIGNPATH_API_TOKEN secret and
+      # SIGNPATH_ORGANIZATION_ID variable exist,
+      # so tag pushes keep producing a working (unsigned) release in the meantime.
+      # Only the installer is signed; the installed kron.exe and the uninstaller are not.
+      - name: Check signing is configured
+        id: signing
+        shell: pwsh
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+        run: |
+          $on = if ($env:SIGNPATH_API_TOKEN -and $env:SIGNPATH_ORGANIZATION_ID) { 'true' } else { 'false' }
+          "enabled=$on" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Upload unsigned installer
+        id: upload
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v7
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: kRon ${{ github.ref_name }}
-          releaseBody: ${{ steps.notes.outputs.body }}
-          releaseDraft: false
-          prerelease: false
+          name: unsigned-installer
+          path: ${{ steps.installer.outputs.path }}
+
+      - name: Sign installer (SignPath)
+        if: steps.signing.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          # Not secret. Set these as repository variables once the SignPath project exists.
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Use signed installer
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        env:
+          SETUP_PATH: ${{ steps.installer.outputs.path }}
+        run: |
+          $signed = Get-ChildItem -Path signed -Recurse -Filter '*-setup.exe' | Select-Object -First 1
+          if (-not $signed) { throw "SignPath returned no *-setup.exe in 'signed'" }
+          Copy-Item $signed.FullName $env:SETUP_PATH -Force
+          $status = (Get-AuthenticodeSignature $env:SETUP_PATH).Status
+          if ($status -ne 'Valid') { throw "Installer signature status is $status, refusing to publish" }
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          NOTES: ${{ steps.notes.outputs.body }}
+          SETUP_PATH: ${{ steps.installer.outputs.path }}
+        run: |
+          $env:NOTES | Out-File -FilePath release-notes.md -Encoding utf8
+          gh release create $env:TAG $env:SETUP_PATH --title "kRon $env:TAG" --notes-file release-notes.md
