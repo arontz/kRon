@@ -67,7 +67,8 @@ jobs:
           if (-not $setup) { throw "No *-setup.exe in build artifacts: $env:ARTIFACT_PATHS" }
           "path=$setup" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
-      # Code signing through SignPath (https://signpath.org). Skipped until the SIGNPATH_API_TOKEN secret exists,
+      # Code signing through SignPath (https://signpath.org). Skipped until the SIGNPATH_API_TOKEN secret and
+      # SIGNPATH_ORGANIZATION_ID variable exist,
       # so tag pushes keep producing a working (unsigned) release in the meantime.
       # Only the installer is signed; the installed kron.exe and the uninstaller are not.
       - name: Check signing is configured
@@ -75,8 +76,9 @@ jobs:
         shell: pwsh
         env:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
         run: |
-          $on = if ($env:SIGNPATH_API_TOKEN) { 'true' } else { 'false' }
+          $on = if ($env:SIGNPATH_API_TOKEN -and $env:SIGNPATH_ORGANIZATION_ID) { 'true' } else { 'false' }
           "enabled=$on" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Upload unsigned installer
@@ -109,7 +111,8 @@ jobs:
           $signed = Get-ChildItem -Path signed -Recurse -Filter '*-setup.exe' | Select-Object -First 1
           if (-not $signed) { throw "SignPath returned no *-setup.exe in 'signed'" }
           Copy-Item $signed.FullName $env:SETUP_PATH -Force
-          (Get-AuthenticodeSignature $env:SETUP_PATH).Status
+          $status = (Get-AuthenticodeSignature $env:SETUP_PATH).Status
+          if ($status -ne 'Valid') { throw "Installer signature status is $status, refusing to publish" }
 
       - name: Publish release
         shell: pwsh
@@ -119,5 +122,5 @@ jobs:
           NOTES: ${{ steps.notes.outputs.body }}
           SETUP_PATH: ${{ steps.installer.outputs.path }}
         run: |
-          $NOTES | Out-File -FilePath release-notes.md -Encoding utf8
+          $env:NOTES | Out-File -FilePath release-notes.md -Encoding utf8
           gh release create $env:TAG $env:SETUP_PATH --title "kRon $env:TAG" --notes-file release-notes.md
