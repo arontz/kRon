@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>kRon</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  body { display: flex; align-items: center; justify-content: flex-end; }
+  #pill {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 4px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition: background 150ms ease;
+    white-space: nowrap;
+  }
+  body.open #pill { background: var(--surface-open); }
+  .mode { display: none; align-items: center; gap: 2px; }
+  body[data-page="music"] #music, body[data-page="system"] #system { display: flex; }
+  body.moving #music, body.moving #system { display: none; }
+  body.moving #pill { background: var(--panel); border-color: var(--line-strong); border-style: dashed; }
+
+  /* Move mode */
+  #move { display: none; align-items: center; gap: 4px; padding: 0 2px; font-size: 12px; color: var(--text-2); }
+  body.moving #move { display: flex; flex: 1; align-self: stretch; }
+  #grip { width: 40px; height: 32px; border-radius: 8px; cursor: grab; touch-action: none; color: var(--text); background: var(--hover); }
+  #grip:active { cursor: grabbing; }
+  #move .txt { margin: 0 8px 0 4px; flex: 1; white-space: nowrap; }
+  #move .btn { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+  #move .btn:hover { background: var(--hover); }
+  #pill-done { background: var(--accent); color: var(--accent-ink); }
+  #pill-done:hover { background: var(--accent) !important; filter: brightness(1.1); }
+
+  #art { width: 30px; height: 30px; border-radius: 7px; margin: 0 6px 0 2px; }
+  .meta { display: flex; flex-direction: column; width: 132px; margin-right: 4px; line-height: 1.25; }
+  .meta .t { font-size: 12px; font-weight: 600; }
+  .meta .a { font-size: 11px; color: var(--text-2); }
+  .ctl { width: 32px; height: 32px; }
+
+  /* Lyrics on taskbar: the current line replaces title / artist. */
+  .lyric { display: none; flex-direction: column; width: 260px; margin-right: 4px; line-height: 1.25; }
+  body.lyric-mode .meta { display: none; }
+  body.lyric-mode .lyric { display: flex; }
+  #lyric-box { overflow: hidden; white-space: nowrap; mask-image: linear-gradient(90deg, #000 92%, transparent); }
+  body.fits #lyric-box { mask-image: none; }
+  #lyric-text { display: inline-block; font-size: 13px; font-weight: 700; color: var(--hi-ui); }
+  #lyric-text.enter { animation: rise 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+  #lyric-sub { font-size: 10.5px; color: var(--text-3); }
+
+  #system { gap: 14px; padding: 0 10px 0 4px; }
+  .sys-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; }
+  .meter { display: flex; flex-direction: column; gap: 3px; width: 64px; }
+  .meter .row { display: flex; justify-content: space-between; font-size: 11px; }
+  .meter .row span:first-child { color: var(--text-2); }
+  .meter .row span:last-child { font-weight: 700; }
+  #mem-bar > span { background: var(--mem); }
+  .net { display: flex; flex-direction: column; font-size: 11px; line-height: 1.35; font-weight: 600; min-width: 72px; }
+  .net .d { color: var(--accent-text); }
+  .net .u { color: var(--up); }
+
+  /* Docked to the left / right screen edge: a narrow column with no text (the track is a tooltip). */
+  body.vertical { justify-content: center; align-items: flex-start; }
+  body.vertical #pill { flex-direction: column; width: 56px; height: auto; padding: 8px 0; gap: 4px; border-radius: 18px; }
+  body.vertical .mode, body.vertical #move { flex-direction: column; align-items: center; gap: 4px; padding: 0; }
+  body.vertical #art { width: 38px; height: 38px; margin: 0 0 4px; border-radius: 9px; }
+  body.vertical .meta, body.vertical #lyric-sub { display: none; }
+  body.vertical #system { gap: 8px; padding: 0; }
+  body.vertical .meter { width: 42px; align-items: stretch; }
+  body.vertical .meter .row { flex-direction: column; align-items: center; gap: 0; font-size: 10px; }
+  body.vertical .net { min-width: 0; align-items: center; font-size: 10px; gap: 2px; }
+  body.vertical #move .txt { display: none; }
+  body.vertical #move { justify-content: space-around; }
+  body.vertical #move .btn { width: 44px; padding: 0; }</style>
+</head>
+<body data-page="music">
+<div id="pill">
+  <div id="move" role="toolbar" aria-label="Move pill">
+    <button id="grip" aria-label="Drag to move the pill" title="Drag to move"></button>
+    <span class="txt">Drag to move</span>
+    <button id="pill-reset" class="btn">Reset</button>
+    <button id="pill-done" class="btn">Done</button>
+  </div>
+  <div id="music" class="mode">
+    <div id="art" class="art"></div>
+    <div class="meta">
+      <span id="title" class="t ellipsis">Nothing playing</span>
+      <span id="artist" class="a ellipsis">Play something in any app</span>
+    </div>
+    <div class="lyric" aria-live="off">
+      <div id="lyric-box"><div id="lyric-text"></div></div>
+      <span id="lyric-sub" class="ellipsis"></span>
+    </div>
+    <button id="prev" class="icon-btn ctl" aria-label="Previous track"></button>
+    <button id="play" class="play-btn ctl" aria-label="Play"></button>
+    <button id="next" class="icon-btn ctl" aria-label="Next track"></button>
+    <button id="lyr" class="icon-btn ctl" aria-label="Lyrics on desktop" aria-pressed="false"></button>
+  </div>
+  <div id="system" class="mode" aria-label="System overview">
+    <div class="sys-icon" aria-hidden="true"></div>
+    <div class="meter">
+      <div class="row"><span>CPU</span><span id="cpu">–</span></div>
+      <div id="cpu-bar" class="bar"><span></span></div>
+    </div>
+    <div class="meter">
+      <div class="row"><span>RAM</span><span id="mem">–</span></div>
+      <div id="mem-bar" class="bar"><span></span></div>
+    </div>
+    <div class="net">
+      <span><span class="d" aria-hidden="true">↓</span> <span id="down">–</span></span>
+      <span><span class="u" aria-hidden="true">↑</span> <span id="up">–</span></span>
+    </div>
+  </div>
+</div>
+<script src="shim.js"></script>
+<script src="common.js"></script>
+<script src="pill.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+/* Dark is the default; body.light (set by common.js from the taskbar theme or the user's choice) flips the surface variables.
+   Accent and lyric colours (--accent, --accent-text, --accent-ink, --hi-ui, --lyr-*) are set from JS. */
+:root {
+  --accent: #7fe0c6;
+  --accent-soft: rgba(127, 224, 198, 0.18);
+  --accent-ink: #0d1a16;
+  --accent-text: #7fe0c6;
+  --hi-ui: #7fe0c6;
+  --lyr-text: #ffffff;
+  --lyr-hi: #7fe0c6;
+  --lyr-shadow: 0 0 1px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 18px rgba(0, 0, 0, 0.5);
+  --lyr-backdrop: rgba(10, 12, 18, 0.42);
+  --mem: #9fb7ff;
+  --up: #ffcf5c;
+
+  --text: #ffffff;
+  --text-2: rgba(255, 255, 255, 0.72);
+  --text-3: rgba(255, 255, 255, 0.6);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.35);
+  --panel: rgba(20, 22, 30, 0.96);
+  --card: rgba(255, 255, 255, 0.05);
+  --track: rgba(255, 255, 255, 0.14);
+  --hover: rgba(255, 255, 255, 0.1);
+  --hover-2: rgba(255, 255, 255, 0.16);
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-open: rgba(255, 255, 255, 0.12);
+  --btn-bg: #ffffff;
+  --btn-ink: #111111;
+  --art: #c2603e;
+}
+
+body.light {
+  --text: #14161b;
+  --text-2: rgba(20, 22, 27, 0.74);
+  --text-3: rgba(20, 22, 27, 0.6);
+  --line: rgba(0, 0, 0, 0.12);
+  --line-strong: rgba(0, 0, 0, 0.4);
+  --panel: rgba(248, 249, 252, 0.97);
+  --card: rgba(0, 0, 0, 0.045);
+  --track: rgba(0, 0, 0, 0.16);
+  --hover: rgba(0, 0, 0, 0.08);
+  --hover-2: rgba(0, 0, 0, 0.14);
+  --surface: rgba(0, 0, 0, 0.06);
+  --surface-open: rgba(0, 0, 0, 0.11);
+  --btn-bg: #14161b;
+  --btn-ink: #ffffff;
+  --mem: #3b5bdb;
+  --up: #9a6700;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  color: var(--text);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+button:disabled { opacity: 0.4; cursor: default; }
+
+.icon-btn { border-radius: 8px; transition: background 120ms ease; }
+.icon-btn:hover { background: var(--hover); }
+.icon-btn.on { color: var(--accent-text); background: var(--accent-soft); }
+
+.play-btn { border-radius: 50%; background: var(--btn-bg); color: var(--btn-ink); transition: transform 120ms ease; }
+.play-btn:hover { transform: scale(1.06); }
+
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.art {
+  background: var(--art) center / cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+.art.has-img svg { display: none; }
+
+.bar { height: 4px; border-radius: 2px; background: var(--track); position: relative; overflow: hidden; }
+.bar > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--accent-text); }
