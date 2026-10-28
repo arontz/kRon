@@ -23,6 +23,13 @@
     });
   }, { rootMargin: '600px 1200px' });
   $$('iframe[data-src]').forEach((f) => lazy.observe(f));
+  // The pinned showcase row hides its parts until they scroll in, so load all of them as soon as the section is near.
+  const loadShowcase = new IntersectionObserver((entries) => {
+    if (!entries.some((e) => e.isIntersecting)) return;
+    $$('#showcase iframe[data-src]').forEach((f) => { f.src = f.dataset.src; delete f.dataset.src; });
+    loadShowcase.disconnect();
+  }, { rootMargin: '1400px 0px' });
+  loadShowcase.observe($('#showcase'));
 
   // Entrances: heading, then text, then picture, once. Rows and list items stagger within their group.
   $$('.tbl .r > div, .qs li, .trust h2, .trust .txt > *, .foot > *, .showcase h2, .showcase .cap').forEach((el) => {
@@ -123,7 +130,7 @@
     simSearch.hidden = which !== 'search';
     simEdit.hidden = which !== 'edit';
   }
-  function fitSearch() { simBody.style.setProperty('--s', String(simBody.clientWidth / 1000)); }
+  function fitSearch() { simBody.style.setProperty('--s', String(simBody.clientWidth / 1000)); } // phones: see the CSS, the window scrolls at a readable size instead
   new ResizeObserver(fitSearch).observe(simBody);
   KronDemo.ui.openSearch = () => { showPanel('search'); fitSearch(); sframe.src = 'demo/lyrsearch.html?hub=miss'; mwin.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); };
   KronDemo.ui.openEditor = (id, hub) => {
