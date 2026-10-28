@@ -25,7 +25,7 @@
   $$('iframe[data-src]').forEach((f) => lazy.observe(f));
 
   // Entrances: heading, then text, then picture, once. Rows and list items stagger within their group.
-  $$('.tbl > div, .qs li, .trust h2, .trust .txt > *, .foot > *, .showcase h2, .showcase .cap').forEach((el) => {
+  $$('.tbl .r > div, .qs li, .trust h2, .trust .txt > *, .foot > *, .showcase h2, .showcase .cap').forEach((el) => {
     el.setAttribute('data-rise', '');
     const sibs = [...el.parentElement.children];
     el.style.setProperty('--i', Math.min(sibs.indexOf(el), 6));

@@ -6,6 +6,7 @@
   const art = (a, b, c) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="${a}"/><circle cx="210" cy="90" r="46" fill="${c}"/><path d="M0 220 L70 170 L130 210 L200 150 L300 230 V300 H0Z" fill="${b}"/></svg>`);
 
+  const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
   const L = (rows) => rows.map(([t, text]) => ({ t, text }));
   const SONGS = [
     {
@@ -70,7 +71,8 @@
         if (ev === 'flyout' && hub.flyoutOpen) setTimeout(() => cb({ payload: true }), 0);
         return () => listeners[ev].delete(cb);
       },
-      emit(ev, payload) { (listeners[ev] || []).forEach((cb) => cb({ payload })); },
+      // Every listener gets its own copy, as a message from the Rust side would: the interface mutates its state optimistically.
+      emit(ev, payload) { (listeners[ev] || []).forEach((cb) => cb({ payload: clone(payload) })); },
       loadSong(ix, position) {
         songIx = (ix + SONGS.length) % SONGS.length;
         const s = song(), m = hub.state.media;
@@ -98,7 +100,7 @@
       invoke(cmd, a, win) {
         const s = hub.state;
         switch (cmd) {
-          case 'get_state': return Object.assign({}, s, { flyoutOpen: hub.flyoutOpen });
+          case 'get_state': return clone(Object.assign({}, s, { flyoutOpen: hub.flyoutOpen }));
           case 'media_cmd': hub.media(a.action, a.ms); return;
           case 'set_lyrics_on': hub.settings({ lyrics_on: !!a.on }); return;
           case 'set_page': hub.settings({ page: a.page }); return;

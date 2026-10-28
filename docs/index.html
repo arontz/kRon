@@ -100,40 +100,48 @@ KronDemo.configure('steps', { flyoutOpen: true, settings: { lyr_place: 'desktop'
 <section class="features frame" id="features" aria-labelledby="h-feat">
   <h2 id="h-feat" class="t-head" data-rise>What shows where</h2>
   <div class="tbl" role="table" aria-label="What each part of kRon shows">
-    <div class="colhead" role="columnheader"></div>
+  <div class="r" role="row">
+    <div class="colhead" role="columnheader" aria-label="Part"></div>
     <div class="colhead feat top" role="columnheader">Pill</div>
     <div class="colhead" role="columnheader">Panel</div>
     <div class="colhead" role="columnheader">Desktop lyrics</div>
-
+  </div>
+  <div class="r" role="row">
     <div class="rowname blk" role="rowheader">The track</div>
     <div class="cell feat" data-col="Pill" role="cell">Art, title and artist</div>
     <div class="cell" data-col="Panel" role="cell">Large art, title, artist, album and source</div>
     <div class="cell" data-col="Desktop lyrics" role="cell">Not shown</div>
-
+  </div>
+  <div class="r" role="row">
     <div class="rowname alt blk" role="rowheader">Controls</div>
     <div class="cell feat alt-feat" data-col="Pill" role="cell">Previous, play, next</div>
     <div class="cell alt" data-col="Panel" role="cell">Seek bar, shuffle, repeat, previous, play, next</div>
     <div class="cell alt" data-col="Desktop lyrics" role="cell">None. Clicks pass through to what is underneath</div>
-
+  </div>
+  <div class="r" role="row">
     <div class="rowname blk" role="rowheader">Lyrics</div>
     <div class="cell feat" data-col="Pill" role="cell">One line replaces the title</div>
     <div class="cell" data-col="Panel" role="cell">Three lines. Click one to jump there</div>
     <div class="cell" data-col="Desktop lyrics" role="cell">Three or five lines. Sung words light up</div>
-
+  </div>
+  <div class="r" role="row">
     <div class="rowname alt blk" role="rowheader">System</div>
     <div class="cell feat" data-col="Pill" role="cell">CPU, memory, download and upload</div>
     <div class="cell alt" data-col="Panel" role="cell">Live CPU graph, memory used, speeds</div>
     <div class="cell alt" data-col="Desktop lyrics" role="cell">Not shown</div>
-
+  </div>
+  <div class="r" role="row">
     <div class="rowname blk" role="rowheader">Where it sits</div>
     <div class="cell feat" data-col="Pill" role="cell">Next to the tray, or dragged anywhere</div>
     <div class="cell" data-col="Panel" role="cell">Opens above the pill when you hover</div>
     <div class="cell" data-col="Desktop lyrics" role="cell">Bottom-right corner, or dragged anywhere</div>
-
+  </div>
+  <div class="r" role="row">
     <div class="rowname alt blk" role="rowheader">Your look</div>
     <div class="cell feat" data-col="Pill" role="cell">Follows your light or dark taskbar</div>
     <div class="cell alt" data-col="Panel" role="cell">Dark or light, your accent colour</div>
     <div class="cell alt" data-col="Desktop lyrics" role="cell">Your colours, size and timing</div>
+  </div>
   </div>
 </section>
 
