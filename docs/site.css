@@ -63,6 +63,8 @@ ul, ol { padding: 0; list-style: none; }
 .hero-copy .t-lead { max-width: 40ch; color: var(--ink); }
 .hero-copy .act { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
 .hero-copy .fine { color: var(--soft); font-size: 16px; }
+.hero-copy .dlcount { color: var(--ink); font-size: 16px; font-weight: 650; }
+.hero-copy .dlcount span { color: var(--accent); }
 .hero .note { margin-top: 28px; color: var(--soft); font-size: 16px; line-height: 1.55; max-width: 40ch; }
 .hero .note b { color: var(--ink); font-weight: 650; }
 /* The stage: a flat colour field with a notched corner, holding the real panel above the real pill on a taskbar. */
