@@ -9,6 +9,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078d4)
 ![Built with](https://img.shields.io/badge/built%20with-Tauri%202%20%2B%20Rust-dea584)
 ![Status](https://img.shields.io/badge/status-early%20development-orange)
+[![Ko-fi](https://img.shields.io/badge/support-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/kronzo)
 
 </div>
 
@@ -209,6 +210,10 @@ src/
 - [ ] Real acrylic blur on the hover panel
 - [ ] Top and bottom edge docking, auto-hide taskbar and multiple monitors
 - [ ] Automatic in-app updates (the tray's **Check for updates…** currently opens the download page)
+
+## Support
+
+If kRon is useful to you, you can support its development on [Ko-fi](https://ko-fi.com/kronzo).
 
 ## Credits
 
