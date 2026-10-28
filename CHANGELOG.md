@@ -2,7 +2,7 @@
 
 Each release's notes on GitHub come from the matching section below. Add a new `## vX.Y.Z` section on top before tagging a release.
 
-## Next
+## v0.4.2
 
 - **Fixed: "Search the web" and "Check for updates…" opened a File Explorer window.** Links now open in your default browser.
 - **The search window fills in only Title and Artist.** Album is left empty so more versions of the song match; type one if you want to narrow it down.
