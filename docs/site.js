@@ -86,6 +86,23 @@
     if (best) light(best);
   }
   row.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(nearest); }, { passive: true });
+  // Size the caption for the longest of its texts once, so changing parts never changes the section's height.
+  const capLive = $('#cap-live');
+  function sizeCaption() {
+    const keep = [capName.textContent, capText.textContent];
+    capLive.style.setProperty('--cap-h', '0px');
+    let max = 0;
+    for (const el of items) {
+      capName.textContent = el.dataset.name;
+      capText.textContent = el.dataset.text;
+      max = Math.max(max, capLive.offsetHeight);
+    }
+    [capName.textContent, capText.textContent] = keep;
+    capLive.style.setProperty('--cap-h', `${max}px`);
+  }
+  sizeCaption();
+  addEventListener('resize', sizeCaption);
+  document.fonts && document.fonts.ready.then(sizeCaption);
   // The row is pinned while the page scrolls: each pixel of vertical scroll moves the row one pixel sideways,
   // so the page stays on this section until the last part is reached, then carries on down.
   // Clicking the section (or its button) pauses that: the page scrolls on normally and the row stays where it is.
@@ -181,11 +198,21 @@
     openWin(simEdit);
   };
   KronDemo.ui.closePanel = () => closeWin(simSearch);
+  $('#desk-reset').addEventListener('click', () => {
+    closeWin(simSearch, true);
+    closeWin(simEdit, true);
+    KronDemo.hub('miss').reset();
+  });
   $$('[data-close]').forEach((b) => b.addEventListener('click', () => closeWin(b.closest('.dwin'))));
   $('#save').addEventListener('click', () => {
     const name = KronDemo.hub('miss').applyLyrics(editor.value);
     editStatus.textContent = name ? `Saved as \u201c${name}\u201d. kRon is using it now.` : 'No lyrics found in that file. Add lines like [00:10.00] words.';
   });
+
+  // Back to top, once the footer comes into view.
+  const totop = $('#totop');
+  new IntersectionObserver((entries) => entries.forEach((e) => totop.classList.toggle('show', e.isIntersecting)), { rootMargin: '0px 0px -20% 0px' }).observe($('.sitefoot'));
+  totop.addEventListener('click', (e) => { e.preventDefault(); scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' }); });
 
   // The table explorer: pointing at a column (or tapping it on a phone) lights that column and shows that part, running.
   const tbl = $('#tbl'), pv = $('#pv'), pvcap = $('#pvcap');

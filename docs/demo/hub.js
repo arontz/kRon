@@ -152,6 +152,15 @@
         return `${s.artist} - ${s.title}.${parsed.status === 'synced' ? 'lrc' : 'txt'}`;
       },
       song,
+      // Back to the start: no lyrics found or written, first song, first page.
+      reset() {
+        for (const k of Object.keys(custom)) delete custom[k];
+        hub.state.settings = Object.assign(baseSettings(), preset.settings || {});
+        hub.emit('settings', hub.state.settings);
+        hub.loadSong(preset.track || 0, preset.position_ms ?? 0);
+        hub.state.media.playing = !reduced;
+        hub.emit('media', hub.state.media);
+      },
       settings(patch) { Object.assign(hub.state.settings, patch); hub.emit('settings', hub.state.settings); },
       invoke(cmd, a, win) {
         const s = hub.state;
