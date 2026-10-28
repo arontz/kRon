@@ -10,8 +10,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'docs', 'demo');
 mkdirSync(out, { recursive: true });
 
-const copy = ['common.css', 'common.js', 'pill.js', 'flyout.js'];
-const pages = ['pill.html', 'flyout.html', 'overlay.html'];
+const copy = ['common.css', 'common.js', 'pill.js', 'flyout.js', 'lyrsearch.js'];
+const pages = ['pill.html', 'flyout.html', 'overlay.html', 'lyrsearch.html'];
 
 for (const f of copy) writeFileSync(join(out, f), readFileSync(join(root, 'src', f)));
 for (const f of pages) {

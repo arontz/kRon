@@ -23,6 +23,13 @@
     });
   }, { rootMargin: '600px 1200px' });
   $$('iframe[data-src]').forEach((f) => lazy.observe(f));
+  // The pinned showcase row hides its parts until they scroll in, so load all of them as soon as the section is near.
+  const loadShowcase = new IntersectionObserver((entries) => {
+    if (!entries.some((e) => e.isIntersecting)) return;
+    $$('#showcase iframe[data-src]').forEach((f) => { f.src = f.dataset.src; delete f.dataset.src; });
+    loadShowcase.disconnect();
+  }, { rootMargin: '1400px 0px' });
+  loadShowcase.observe($('#showcase'));
 
   // Entrances: heading, then text, then picture, once. Rows and list items stagger within their group.
   $$('.tbl .r > div, .qs li, .trust h2, .trust .txt > *, .foot > *, .showcase h2, .showcase .cap').forEach((el) => {
@@ -64,10 +71,30 @@
     if (best) light(best);
   }
   row.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(nearest); }, { passive: true });
-  // Scroll only the row sideways; scrollIntoView would also drag the page up or down.
+  // The row is pinned while the page scrolls: each pixel of vertical scroll moves the row one pixel sideways,
+  // so the page stays on this section until the last part is reached, then carries on down.
+  const pin = $('#showcase'), inner = $('#pin-inner');
+  let travel = 0;
+  function measure() {
+    travel = Math.max(0, row.scrollWidth - row.clientWidth);
+    pin.style.height = `${inner.offsetHeight + travel}px`;
+    // If the pinned content is taller than the window, pin its bottom edge instead of cutting it off.
+    inner.style.top = `${Math.min(0, innerHeight - inner.offsetHeight)}px`;
+    follow();
+  }
+  function follow() {
+    const top = pin.getBoundingClientRect().top - Number.parseFloat(inner.style.top || '0');
+    row.scrollLeft = Math.max(0, Math.min(travel, -top));
+  }
+  addEventListener('scroll', follow, { passive: true });
+  addEventListener('resize', measure);
+  addEventListener('load', measure);
+  measure();
+  // Moving to a part means scrolling the page to where that part is centred.
   function centre(el, smooth) {
     const left = el.offsetLeft - row.offsetLeft - (row.clientWidth - el.offsetWidth) / 2;
-    row.scrollTo({ left, behavior: smooth && !reduced ? 'smooth' : 'auto' });
+    const y = pin.getBoundingClientRect().top + scrollY - Number.parseFloat(inner.style.top || '0') + Math.max(0, Math.min(travel, left));
+    scrollTo({ top: y, behavior: smooth && !reduced ? 'smooth' : 'auto' });
   }
   items.forEach((el) => el.addEventListener('click', () => { if (el !== lit) centre(el, true); }));
   row.addEventListener('keydown', (e) => {
@@ -75,12 +102,11 @@
     const next = e.key === 'ArrowRight' ? items[i + 1] : e.key === 'ArrowLeft' ? items[i - 1] : null;
     if (next) { e.preventDefault(); centre(next, true); }
   });
-  // Start with the first part centred.
-  requestAnimationFrame(() => centre(items[0], false));
+  requestAnimationFrame(() => measure());
 
   // How it goes: one slider drives the clause and the fragment.
-  const CLAUSES = ['Play anything, anywhere.', 'Hover to open the panel.', 'Read along on your desktop.', 'Make it match yours.'];
-  const NAMES = ['Play', 'Hover', 'Read along', 'Make it yours'];
+  const CLAUSES = ['Play anything, anywhere.', 'Hover to open the panel.', 'Sing along on your desktop.', 'Make it match yours.'];
+  const NAMES = ['Play', 'Hover', 'Sing along', 'Make it yours'];
   const SLOT = [0, 1, 2, 1];
   const steps = $('#steps'), clause = $('#clause'), fill = $('#fill');
   const names = $$('#names span'), slots = $$('.how .slot');
@@ -95,6 +121,35 @@
   }
   steps.addEventListener('input', step);
   step();
+
+  // Lyrics missing: the panel's magnifier and + open a search window (kRon's real one) or a lyrics file to write.
+  const mwin = $('#mwin'), mhint = $('#mhint'), simSearch = $('#sim-search'), simEdit = $('#sim-edit');
+  const sframe = $('#searchframe'), editor = $('#editor'), editStatus = $('#edit-status'), simBody = $('#simbody');
+  function showPanel(which) {
+    mhint.hidden = !!which;
+    simSearch.hidden = which !== 'search';
+    simEdit.hidden = which !== 'edit';
+  }
+  function fitSearch() { simBody.style.setProperty('--s', String(simBody.clientWidth / 1000)); } // phones: see the CSS, the window scrolls at a readable size instead
+  new ResizeObserver(fitSearch).observe(simBody);
+  KronDemo.ui.openSearch = () => { showPanel('search'); fitSearch(); sframe.src = 'demo/lyrsearch.html?hub=miss'; mwin.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); };
+  KronDemo.ui.openEditor = (id, hub) => {
+    const s = hub.song();
+    const sample = s.key === 'lantern-season'
+      ? '[00:08.00] Lanterns on the water, slow\n[00:16.00] Every small light has a name\n[00:24.00] Carry them down to the dark\n[00:32.00] And let the river explain\n'
+      : '[00:10.00] First line of the song\n[00:18.00] Second line of the song\n';
+    $('#edit-title').textContent = `${s.artist} - ${s.title}.lrc`;
+    editor.value = `[ar:${s.artist}]\n[ti:${s.title}]\n[al:${s.album}]\n# Paste lyrics below and save. Synced lines look like: [01:23.45] words\n\n${sample}`;
+    editStatus.textContent = 'In the app this opens in Notepad. Edit the lines, then save, and kRon picks the file up.';
+    showPanel('edit');
+    mwin.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+  };
+  KronDemo.ui.closePanel = () => { showPanel(''); sframe.removeAttribute('src'); };
+  $$('[data-close]').forEach((b) => b.addEventListener('click', () => KronDemo.ui.closePanel()));
+  $('#save').addEventListener('click', () => {
+    const name = KronDemo.hub('miss').applyLyrics(editor.value);
+    editStatus.textContent = name ? `Saved as \u201c${name}\u201d. kRon is using it now.` : 'No lyrics found in that file. Add lines like [00:10.00] words.';
+  });
 
   // Questions: the answer shows in the pane (or opens in place on a phone).
   const qs = $$('#qlist button');

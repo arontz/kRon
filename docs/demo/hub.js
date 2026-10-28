@@ -33,7 +33,48 @@
         [60000, 'Slow clouds over a slow river'], [68500, 'Let the afternoon be long'], [77000, 'Glass Sunday, hold the light'],
         [86000, 'Hold it till the evening comes']]),
     },
+    {
+      key: 'paper-moons', title: 'Paper Moons', artist: 'Quiet Harbour', album: 'Small Hours', duration_ms: 198000,
+      art: art('#3d8f86', '#10282d', '#f6d9a8'), lines: [],
+    },
+    {
+      key: 'lantern-season', title: 'Lantern Season', artist: 'Harbour and Co', album: 'Small Hours', duration_ms: 176000,
+      art: art('#c9863a', '#2a1a14', '#ffe9b8'), lines: [],
+    },
   ];
+
+  // What the search window finds for "Paper Moons" (made up). Anything else finds nothing, so the second song needs a file of your own.
+  const PAPER_MOONS_LRC = [
+    '[ar:Quiet Harbour]', '[ti:Paper Moons]', '[al:Small Hours]',
+    '[00:09.00] Paper moons above the harbour', '[00:17.50] Folded small enough to keep', '[00:26.00] Every boat a quiet answer',
+    '[00:34.50] To the questions of the deep', '[00:43.00] Hang them up along the railing', '[00:51.50] Let the tide run through the string',
+    '[01:00.00] Paper moons above the harbour', '[01:08.50] Nothing here is ever lost',
+  ].join('\n');
+  const PAPER_MOONS_PLAIN = 'Paper moons above the harbour\nFolded small enough to keep\nEvery boat a quiet answer\nTo the questions of the deep';
+  const HITS = [
+    { source: 'LRCLIB', id: 'pm1', title: 'Paper Moons', artist: 'Quiet Harbour', album: 'Small Hours', synced: true, content: PAPER_MOONS_LRC },
+    { source: 'QQ Music', id: 'pm2', title: 'Paper Moons', artist: 'Quiet Harbour', album: 'Small Hours', synced: null, content: null },
+    { source: 'LRCLIB', id: 'pm3', title: 'Paper Moons (live)', artist: 'Quiet Harbour', album: 'Live at the Pier', synced: false, content: PAPER_MOONS_PLAIN },
+  ];
+
+  // Reads an .lrc file: "[mm:ss.xx] words" lines are synced; if there are none, plain lines are kept as unsynced.
+  function parseLrc(text) {
+    const synced = [], plain = [];
+    for (const raw of String(text).split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) continue;
+      const stamps = [...line.matchAll(/\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g)];
+      if (stamps.length) {
+        const words = line.replace(/\[[^\]]*\]/g, '').trim();
+        for (const m of stamps) {
+          const frac = m[3] ? Number(m[3].padEnd(3, '0').slice(0, 3)) : 0;
+          synced.push({ t: Number(m[1]) * 60000 + Number(m[2]) * 1000 + frac, text: words });
+        }
+      } else if (!/^\[[a-z]+:.*\]$/i.test(line)) plain.push({ t: 0, text: line });
+    }
+    synced.sort((a, b) => a.t - b.t);
+    return synced.length ? { status: 'synced', lines: synced } : { status: plain.length ? 'plain' : 'none', lines: plain };
+  }
 
   const baseSettings = () => ({
     lyrics_on: true, page: 'music', pill_side: '', dock_on: false, theme_mode: 'dark', accent: '#7fe0c6', lyr_text: '', lyr_hi: '',
@@ -47,8 +88,10 @@
 
   function makeHub(id, preset) {
     const listeners = {};
+    const playlist = (preset.playlist || [0, 1, 2]).map((i) => SONGS[i]);
     let songIx = preset.track || 0;
-    const song = () => SONGS[songIx];
+    const song = () => playlist[songIx];
+    const custom = {}; // lyrics the visitor found or wrote for a song
     let cpu = 34, down = 2.4e6, up = 3.1e5;
     const hist = Array.from({ length: 40 }, (_, i) => 30 + 12 * Math.sin(i / 4) + (i % 5));
 
@@ -74,12 +117,15 @@
       // Every listener gets its own copy, as a message from the Rust side would: the interface mutates its state optimistically.
       emit(ev, payload) { (listeners[ev] || []).forEach((cb) => cb({ payload: clone(payload) })); },
       loadSong(ix, position) {
-        songIx = (ix + SONGS.length) % SONGS.length;
+        songIx = (ix + playlist.length) % playlist.length;
         const s = song(), m = hub.state.media;
         Object.assign(m, { title: s.title, artist: s.artist, album: s.album, duration_ms: s.duration_ms, track_key: s.key,
           position_ms: position ?? 0, updated_at_ms: Date.now() });
         hub.state.artwork = s.art;
-        hub.state.lyrics = { track_key: s.key, status: 'synced', source: 'lrclib', lines: s.lines };
+        const mine = custom[s.key];
+        hub.state.lyrics = mine ? Object.assign({ track_key: s.key }, mine)
+          : s.lines.length ? { track_key: s.key, status: 'synced', source: 'lrclib', lines: s.lines }
+          : { track_key: s.key, status: 'none', source: '', lines: [] };
         hub.emit('media', m); hub.emit('artwork', hub.state.artwork); hub.emit('lyrics', hub.state.lyrics);
       },
       position() {
@@ -96,6 +142,16 @@
         else if (action === 'repeat') m.repeat = { none: 'all', all: 'track', track: 'none' }[m.repeat] || 'none';
         hub.emit('media', m);
       },
+      // Saves lyrics for the playing song the way the app does: as a file of the visitor's own, which then comes first.
+      applyLyrics(content) {
+        const s = song(), parsed = parseLrc(content);
+        if (!parsed.lines.length) return null;
+        custom[s.key] = { status: parsed.status, source: 'local', lines: parsed.lines };
+        hub.state.lyrics = Object.assign({ track_key: s.key }, custom[s.key]);
+        hub.emit('lyrics', hub.state.lyrics);
+        return `${s.artist} - ${s.title}.${parsed.status === 'synced' ? 'lrc' : 'txt'}`;
+      },
+      song,
       settings(patch) { Object.assign(hub.state.settings, patch); hub.emit('settings', hub.state.settings); },
       invoke(cmd, a, win) {
         const s = hub.state;
@@ -127,7 +183,33 @@
             }
             return;
           }
-          case 'set_pill_edit': case 'set_dock_on': case 'lyrics_action': case 'move_pill_by': case 'reset_pill': case 'close_lyrics_search':
+          case 'lyrics_action': {
+            const ui = window.KronDemo.ui || {};
+            if (a.action === 'search' && ui.openSearch) { ui.openSearch(id); return; }
+            if (a.action === 'add' && ui.openEditor) { ui.openEditor(id, hub); return; }
+            if (a.action === 'reload') { toastFns.forEach((f) => f(hub.state.lyrics.status === 'none' ? 'Checked again: nothing is saved for this song yet.' : 'Checked again: lyrics found.')); return; }
+            toastFns.forEach((f) => f(a.action === 'search_web' ? 'In the app this opens a web search for the lyrics in your browser.' : 'That part works with files and windows on your PC, so it only runs in the installed app.'));
+            return;
+          }
+          case 'lyrics_search': {
+            const q = `${a.title || ''}`.toLowerCase();
+            return /paper moon/.test(q) ? clone(HITS.map((x) => Object.assign({}, x, { content: null }))) : [];
+          }
+          case 'lyrics_fetch': {
+            const hit = HITS.find((x) => x.id === a.id);
+            return hit ? (hit.id === 'pm2' ? PAPER_MOONS_LRC : hit.content) : '';
+          }
+          case 'lyrics_apply': {
+            const name = hub.applyLyrics(a.content);
+            if (!name) throw new Error('That file has no lyrics in it.');
+            return name;
+          }
+          case 'close_lyrics_search': {
+            const ui = window.KronDemo.ui || {};
+            if (ui.closePanel) ui.closePanel(id);
+            return;
+          }
+          case 'set_pill_edit': case 'set_dock_on': case 'move_pill_by': case 'reset_pill':
             toastFns.forEach((f) => f('That part works with files and windows on your PC, so it only runs in the installed app.'));
             return;
           default: return;
@@ -156,6 +238,8 @@
 
   window.KronDemo = {
     songs: SONGS,
+    parseLrc,
+    ui: {},
     configure(id, preset) { presets[id] = preset; },
     hub(id) { return hubs[id] || (hubs[id] = makeHub(id, presets[id] || {})); },
     onToast(fn) { toastFns.add(fn); },
