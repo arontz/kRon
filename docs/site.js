@@ -31,8 +31,23 @@
   }, { rootMargin: '1400px 0px' });
   loadShowcase.observe($('#showcase'));
 
+  // Enlarged pills: as big as data-fit allows, never wider than their slot. The pill changes width with its mode
+  // (a lyric line is wider than a title), so this re-fits whenever the frame or its slot changes size.
+  function fit(f) {
+    const w = parseFloat(f.style.width) || Number(f.getAttribute('width'));
+    const room = f.parentElement.clientWidth - 24;
+    if (!w || room <= 0) return;
+    const z = String(Math.min(Number(f.dataset.fit), room / w).toFixed(3));
+    if (f.style.zoom !== z) f.style.zoom = z;
+  }
+  $$('iframe[data-fit]').forEach((f) => {
+    new MutationObserver(() => fit(f)).observe(f, { attributes: true, attributeFilter: ['style'] });
+    new ResizeObserver(() => fit(f)).observe(f.parentElement);
+    fit(f);
+  });
+
   // Entrances: heading, then text, then picture, once. Rows and list items stagger within their group.
-  $$('.tbl .r > div, .qs li, .trust h2, .trust .txt > *, .foot > *, .showcase h2, .showcase .cap').forEach((el) => {
+  $$('.trust h2, .trust .txt > *, .foot > *, .showcase h2, .showcase .cap').forEach((el) => {
     el.setAttribute('data-rise', '');
     const sibs = [...el.parentElement.children];
     el.style.setProperty('--i', Math.min(sibs.indexOf(el), 6));
@@ -133,19 +148,27 @@
     editStatus.textContent = name ? `Saved as \u201c${name}\u201d. kRon is using it now.` : 'No lyrics found in that file. Add lines like [00:10.00] words.';
   });
 
-  // Questions: the answer shows in the pane (or opens in place on a phone).
-  const qs = $$('#qlist button');
-  const pane = $('#pane');
-  function pick(btn) {
-    qs.forEach((b) => b.setAttribute('aria-expanded', String(b === btn)));
-    const p = document.createElement('p');
-    p.textContent = btn.parentElement.querySelector('.a').textContent;
-    pane.replaceChildren(p);
+  // The table explorer: pointing at a column (or tapping it on a phone) lights that column and shows that part, running.
+  const tbl = $('#tbl'), pv = $('#pv'), pvcap = $('#pvcap');
+  const CAPS = {
+    pill: '<b>The pill</b> sits on your taskbar, next to the tray. It is always there.',
+    panel: '<b>The panel</b> opens above the pill when you rest the pointer on it, and closes when you move away.',
+    lyrics: '<b>Desktop lyrics</b> float in a corner of your screen, over whatever you are doing. Clicks go straight through them.',
+  };
+  let sel = 'pill';
+  function choose(part) {
+    if (!part || part === sel) return;
+    sel = part;
+    tbl.dataset.sel = part;
+    pv.dataset.sel = part;
+    $$('.pvs', pv).forEach((s) => s.classList.toggle('on', s.dataset.part === part));
+    $$('.colhead button', tbl).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.part === part)));
+    pvcap.innerHTML = CAPS[part];
   }
-  qs.forEach((b) => {
-    b.addEventListener('click', () => pick(b));
-    b.addEventListener('mouseenter', () => { if (matchMedia('(min-width: 901px)').matches) pick(b); });
-    b.addEventListener('focus', () => { if (matchMedia('(min-width: 901px)').matches) pick(b); });
+  const canHover = matchMedia('(hover: hover)').matches;
+  $$('[data-part]', tbl).forEach((el) => {
+    if (canHover) el.addEventListener('pointerenter', () => choose(el.dataset.part));
+    el.addEventListener('click', () => choose(el.dataset.part));
   });
-  pick(qs[0]);
+  $$('.colhead button', tbl).forEach((b) => b.addEventListener('focus', () => choose(b.dataset.part)));
 })();
