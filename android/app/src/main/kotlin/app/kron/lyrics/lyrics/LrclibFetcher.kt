@@ -1,5 +1,7 @@
 package app.kron.lyrics.lyrics
 
+import app.kron.lyrics.log.LogKind
+import app.kron.lyrics.log.activityLog
 import app.kron.lyrics.model.LyricsResult
 import app.kron.lyrics.model.Track
 import kotlinx.coroutines.Dispatchers
@@ -84,12 +86,14 @@ class LrclibFetcher(private val baseUrl: String = "https://lrclib.net") : Lyrics
         c.setRequestProperty("User-Agent", "kRon-Android/0.1 (https://github.com/arontz/kRon)")
         try {
             val code = c.responseCode
+            activityLog.add(LogKind.NETWORK, "GET ${url.removePrefix("https://")} → HTTP $code")
             val stream = if (code in 200..299) c.inputStream else c.errorStream
             code to (stream?.bufferedReader()?.use { it.readText() } ?: "")
         } finally {
             c.disconnect()
         }
     } catch (_: Exception) {
+        activityLog.add(LogKind.NETWORK, "GET ${url.removePrefix("https://")} → no connection")
         null // IOException, but also anything HttpURLConnection throws for odd responses
     }
 }

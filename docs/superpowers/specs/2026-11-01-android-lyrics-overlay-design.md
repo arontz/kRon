@@ -28,7 +28,7 @@ A later phase adds song recognition: a **Listen** button inside the kRon app its
 - The card must never steal focus or block touches outside its own bounds.
 - Nothing runs when no music is playing: no foreground service, no polling.
 - The app reads only media metadata from notifications. It never stores or sends other notification content.
-- The only network traffic is to the lyrics service.
+- Network traffic: the lyrics service (lrclib.net), plus api.github.com only when the user taps "Check for updates". An in-app Activity log lists everything read or sent; it is kept in memory only.
 
 ## What the user sees
 

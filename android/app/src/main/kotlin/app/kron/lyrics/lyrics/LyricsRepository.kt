@@ -1,5 +1,7 @@
 package app.kron.lyrics.lyrics
 
+import app.kron.lyrics.log.LogKind
+import app.kron.lyrics.log.activityLog
 import app.kron.lyrics.model.LrcLine
 import app.kron.lyrics.model.LyricsResult
 import app.kron.lyrics.model.Track
@@ -14,7 +16,10 @@ class LyricsRepository(
     override suspend fun fetch(track: Track): LyricsResult {
         withContext(Dispatchers.IO) { runCatching { cache.get(track) }.getOrNull() }?.let { text ->
             val lines = parseLrc(text)
-            if (lines.isNotEmpty()) return LyricsResult.Synced(lines)
+            if (lines.isNotEmpty()) {
+                activityLog.add(LogKind.CACHE, "Lyrics for \"${track.title}\" came from this device, no network used")
+                return LyricsResult.Synced(lines)
+            }
         }
         val result = fetcher.fetch(track)
         if (result is LyricsResult.Synced) {

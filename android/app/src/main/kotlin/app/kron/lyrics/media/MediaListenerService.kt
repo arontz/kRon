@@ -7,6 +7,9 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
+import app.kron.lyrics.log.LogKind
+import app.kron.lyrics.log.activityLog
+import app.kron.lyrics.log.describeRead
 import app.kron.lyrics.model.PlaybackSnapshot
 import app.kron.lyrics.overlay.OverlayHost
 
@@ -65,6 +68,7 @@ class MediaListenerService : NotificationListenerService() {
         val controller = best?.let { controllers[infos.indexOf(it)] }
         val state = controller?.playbackState
         if (controller == null || state == null) {
+            activityLog.addIfChanged("none", LogKind.MEDIA, "No active media session")
             NowPlayingStore.publish(NowPlayingStore.EMPTY)
             return
         }
@@ -79,6 +83,12 @@ class MediaListenerService : NotificationListenerService() {
             positionMs = state.position,
             speed = state.playbackSpeed,
             updateTimeMs = state.lastPositionUpdateTime,
+        )
+        val t = snapshot.track
+        activityLog.addIfChanged(
+            "${controller.packageName}|${t?.title}|${t?.artist}|${snapshot.playing}",
+            LogKind.MEDIA,
+            describeRead(controller.packageName, snapshot),
         )
         NowPlayingStore.publish(snapshot)
         startOverlayIfPlaying(snapshot)
