@@ -3,5 +3,13 @@ src-tauri/target/
 src-tauri/gen/
 
 .claude/
-
+.superpowers/
 .taste-skill/
+
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/keystore.properties
+*.jks
+*.keystore
