@@ -33,6 +33,8 @@ class MediaListenerService : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
+        ListenerConnection.connected = true
+        activityLog.add(LogKind.SERVICE, "Notification access connected")
         val m = getSystemService(MediaSessionManager::class.java)
         manager = m
         val component = ComponentName(this, MediaListenerService::class.java)
@@ -41,6 +43,8 @@ class MediaListenerService : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
+        ListenerConnection.connected = false
+        activityLog.add(LogKind.SERVICE, "Notification access disconnected")
         manager?.removeOnActiveSessionsChangedListener(sessionsListener)
         release()
         NowPlayingStore.publish(NowPlayingStore.EMPTY)

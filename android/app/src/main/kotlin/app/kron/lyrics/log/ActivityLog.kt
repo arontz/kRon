@@ -10,6 +10,7 @@ enum class LogKind(val label: String) {
     NETWORK("Sent"),
     CACHE("Cache"),
     UPDATE("Update"),
+    SERVICE("Service"),
 }
 
 data class LogEntry(val timeMs: Long, val kind: LogKind, val text: String)
