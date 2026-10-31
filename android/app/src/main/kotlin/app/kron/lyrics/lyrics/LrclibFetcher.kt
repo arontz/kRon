@@ -1,7 +1,5 @@
 package app.kron.lyrics.lyrics
 
-import app.kron.lyrics.log.LogKind
-import app.kron.lyrics.log.activityLog
 import app.kron.lyrics.model.LyricsResult
 import app.kron.lyrics.model.Track
 import kotlinx.coroutines.Dispatchers
@@ -11,8 +9,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 interface LyricsFetcher {
@@ -78,22 +74,5 @@ class LrclibFetcher(private val baseUrl: String = "https://lrclib.net") : Lyrics
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
-    /** Status code and body, or null when the network failed. */
-    private fun get(url: String): Pair<Int, String>? = try {
-        val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 10_000
-        c.readTimeout = 10_000
-        c.setRequestProperty("User-Agent", "kRon-Android/0.1 (https://github.com/arontz/kRon)")
-        try {
-            val code = c.responseCode
-            activityLog.add(LogKind.NETWORK, "GET ${url.removePrefix("https://")} → HTTP $code")
-            val stream = if (code in 200..299) c.inputStream else c.errorStream
-            code to (stream?.bufferedReader()?.use { it.readText() } ?: "")
-        } finally {
-            c.disconnect()
-        }
-    } catch (_: Exception) {
-        activityLog.add(LogKind.NETWORK, "GET ${url.removePrefix("https://")} → no connection")
-        null // IOException, but also anything HttpURLConnection throws for odd responses
-    }
+    private fun get(url: String): Pair<Int, String>? = httpGet(url)
 }
