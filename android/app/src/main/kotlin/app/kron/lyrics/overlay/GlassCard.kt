@@ -67,18 +67,19 @@ fun GlassCard(
                 Side(lines.next)
             }
             LyricsUiState.Missing -> Side("No lyrics found")
+            LyricsUiState.Unavailable -> Side("Lyrics service down, retrying", maxLines = 2)
             LyricsUiState.Loading, LyricsUiState.Idle -> Unit
         }
     }
 }
 
 @Composable
-private fun Side(text: String) {
+private fun Side(text: String, maxLines: Int = 1) {
     Text(
         text = text,
         color = Color.White.copy(alpha = 0.7f),
         fontSize = 10.sp,
-        maxLines = 1,
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         style = Shadowed,
     )
