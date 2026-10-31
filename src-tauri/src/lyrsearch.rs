@@ -4,11 +4,10 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::lyrics;
+use crate::qq;
 use crate::Shared;
 
 const LRCLIB_SEARCH: &str = "https://lrclib.net/api/search";
-const QQ_SEARCH: &str = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp";
-const QQ_LYRIC: &str = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg";
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Hit {
@@ -95,83 +94,27 @@ async fn search_lrclib(title: &str, album: &str, artist: &str) -> Result<Vec<Hit
         .collect())
 }
 
-// ---------- QQ Music (unofficial; opt-in) ----------
+// ---------- QQ Music (unofficial; the endpoints live in `qq`) ----------
 
 async fn search_qq(title: &str, album: &str, artist: &str) -> Result<Vec<Hit>, String> {
     let w = [artist, title, album].iter().filter(|s| !s.is_empty()).cloned().collect::<Vec<_>>().join(" ");
-    let v: serde_json::Value = client()?
-        .get(QQ_SEARCH)
-        .header("Referer", "https://y.qq.com/")
-        .query(&[("w", w.as_str()), ("format", "json"), ("n", "15"), ("p", "1")])
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .json()
-        .await
-        .map_err(|e| e.to_string())?;
-    let list = v["data"]["song"]["list"].as_array().cloned().unwrap_or_default();
-    Ok(list
+    Ok(qq::search(&w)
+        .await?
         .into_iter()
-        .filter_map(|s| {
-            let id = s["songmid"].as_str()?.to_string();
-            let artist = s["singer"]
-                .as_array()
-                .map(|a| a.iter().filter_map(|x| x["name"].as_str()).collect::<Vec<_>>().join(", "))
-                .unwrap_or_default();
-            Some(Hit {
-                source: "QQ Music".into(),
-                id,
-                title: s["songname"].as_str().unwrap_or_default().to_string(),
-                artist,
-                album: s["albumname"].as_str().unwrap_or_default().to_string(),
-                synced: None,
-                content: None,
-            })
+        .map(|s| Hit {
+            source: "QQ Music".into(),
+            id: s.mid,
+            title: s.title,
+            artist: s.artist,
+            album: s.album,
+            synced: None,
+            content: None,
         })
         .collect())
 }
 
-fn decode_entities(s: &str) -> String {
-    let mut out = s
-        .replace("&apos;", "'")
-        .replace("&quot;", "\"")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&");
-    // Numeric entities like &#10; (newline) or &#39;
-    while let Some(start) = out.find("&#") {
-        let Some(end) = out[start..].find(';') else { break };
-        let num = &out[start + 2..start + end];
-        let ch = if let Some(hex) = num.strip_prefix(['x', 'X']) {
-            u32::from_str_radix(hex, 16).ok()
-        } else {
-            num.parse::<u32>().ok()
-        }
-        .and_then(char::from_u32);
-        match ch {
-            Some(c) => out.replace_range(start..start + end + 1, &c.to_string()),
-            None => break,
-        }
-    }
-    out
-}
-
 async fn fetch_qq(id: &str) -> Result<String, String> {
-    let v: serde_json::Value = client()?
-        .get(QQ_LYRIC)
-        .header("Referer", "https://y.qq.com/")
-        .query(&[("songmid", id), ("format", "json"), ("nobase64", "1")])
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .json()
-        .await
-        .map_err(|e| e.to_string())?;
-    let text = v["lyric"].as_str().unwrap_or_default();
-    if text.trim().is_empty() {
-        return Err("This source has no lyrics for that song".into());
-    }
-    Ok(decode_entities(text))
+    qq::lyric(id).await?.ok_or_else(|| "This source has no lyrics for that song".to_string())
 }
 
 // ---------- commands ----------
@@ -262,15 +205,4 @@ pub fn open_window(app: &AppHandle) {
             let _ = w.set_focus();
         }
     });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn decodes_entities() {
-        assert_eq!(decode_entities("Don&apos;t &amp; won&#39;t&#10;stop"), "Don't & won't\nstop");
-        assert_eq!(decode_entities("a &#x41; b"), "a A b");
-    }
 }

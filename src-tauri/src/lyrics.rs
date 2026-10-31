@@ -1,5 +1,5 @@
 //! Finds lyrics for the current track: the user's lyrics folder first, then the
-//! disk cache, then LRCLIB. Also the Search / Add / Folder / Reload actions.
+//! disk cache, then QQ Music, then LRCLIB. Also the Search / Add / Folder / Reload actions.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -23,7 +23,7 @@ pub struct Lyrics {
     pub track_key: String,
     /// "idle" | "loading" | "synced" | "plain" | "none" | "error"
     pub status: String,
-    /// "local" | "lrclib" | ""
+    /// "local" | "qq" | "lrclib" | ""
     pub source: String,
     pub lines: Vec<Line>,
     /// Modification time of the local file these came from, to notice edits.
@@ -139,10 +139,11 @@ fn load_local(path: &Path, key: &str) -> Option<Lyrics> {
     })
 }
 
-// ---------- LRCLIB + cache ----------
+// ---------- QQ Music, LRCLIB + cache ----------
 
 fn cache_path(app: &AppHandle, key: &str) -> Option<PathBuf> {
-    let dir = app.path().app_cache_dir().ok()?.join("lyrics");
+    // "lyrics-v2": the first cache only ever asked LRCLIB, so its "no lyrics" entries must not hide what QQ Music has.
+    let dir = app.path().app_cache_dir().ok()?.join("lyrics-v2");
     std::fs::create_dir_all(&dir).ok()?;
     let safe: String = key
         .chars()
@@ -194,6 +195,77 @@ async fn fetch(snap: &MediaSnapshot) -> Result<Option<LrclibRecord>, reqwest::Er
     Ok(plain)
 }
 
+/// Lyrics one online source came back with: timestamped text, plain text, or both.
+#[derive(Debug)]
+struct Found {
+    source: &'static str,
+    synced: Option<String>,
+    plain: Option<String>,
+}
+
+#[derive(Debug)]
+struct Lookup {
+    found: Option<Found>,
+    /// True when every source that was asked answered, so "nothing found" can be remembered. A source that was down
+    /// might have had them, so that case is not cached.
+    complete: bool,
+}
+
+/// QQ Music's text when it has timestamps. Then LRCLIB does not need to be asked at all.
+fn qq_synced(qq: &Result<Option<String>, String>) -> Option<Found> {
+    let text = qq.as_ref().ok()?.as_ref()?;
+    (!parse_lrc(text).is_empty()).then(|| Found { source: "qq", synced: Some(text.clone()), plain: None })
+}
+
+/// Combines the answers of the two sources: timestamped lyrics from either, then QQ Music's plain text, then
+/// LRCLIB's. An error only when neither source could be reached.
+fn merge(qq: Result<Option<String>, String>, lr: Result<Option<LrclibRecord>, String>) -> Result<Lookup, ()> {
+    if qq.is_err() && lr.is_err() {
+        return Err(());
+    }
+    let complete = qq.is_ok() && lr.is_ok();
+    let non_empty = |s: Option<String>| s.filter(|t| !t.trim().is_empty());
+
+    let lr_rec = lr.ok().flatten();
+    let lr_synced = lr_rec.as_ref().and_then(|r| non_empty(r.synced.clone()));
+    let lr_plain = lr_rec.as_ref().and_then(|r| non_empty(r.plain.clone()));
+    let qq_text = qq.ok().flatten().and_then(|t| non_empty(Some(t)));
+
+    let found = if let Some(s) = lr_synced {
+        Some(Found { source: "lrclib", synced: Some(s), plain: None })
+    } else if let Some(t) = qq_text {
+        Some(Found { source: "qq", synced: None, plain: Some(t) })
+    } else {
+        lr_plain.map(|p| Found { source: "lrclib", synced: None, plain: Some(p) })
+    };
+    Ok(Lookup { found, complete })
+}
+
+/// QQ Music first; LRCLIB only when QQ Music has no timestamped lyrics.
+async fn find(snap: &MediaSnapshot) -> Result<Lookup, ()> {
+    let qq = crate::qq::find(&snap.title, &snap.artist, snap.duration_ms).await;
+    if let Some(found) = qq_synced(&qq) {
+        return Ok(Lookup { found: Some(found), complete: true });
+    }
+    let lr = fetch(snap).await.map_err(|e| e.to_string());
+    merge(qq, lr)
+}
+
+fn lyrics_from(key: &str, found: Option<Found>) -> Lyrics {
+    let Some(f) = found else { return status_only(key, "none") };
+    if let Some(s) = f.synced.as_deref() {
+        let lines = parse_lrc(s);
+        if !lines.is_empty() {
+            return Lyrics { track_key: key.into(), status: "synced".into(), source: f.source.into(), lines, local_mtime: None };
+        }
+    }
+    let lines = plain_lines(f.plain.as_deref().unwrap_or_default());
+    if lines.is_empty() {
+        return status_only(key, "none");
+    }
+    Lyrics { track_key: key.into(), status: "plain".into(), source: f.source.into(), lines, local_mtime: None }
+}
+
 /// `force` starts a new track; otherwise results for a track that is no longer current are dropped.
 fn publish(app: &AppHandle, lyrics: Lyrics, force: bool) {
     let shared = app.state::<Shared>();
@@ -227,29 +299,18 @@ pub fn on_track_change(app: &AppHandle, snap: &MediaSnapshot) {
     tauri::async_runtime::spawn(async move {
         let path = cache_path(&app, &key);
         if let Some(cached) = path.as_ref().and_then(|p| std::fs::read(p).ok()).and_then(|b| serde_json::from_slice::<Lyrics>(&b).ok()) {
-            publish(&app, Lyrics { source: "lrclib".into(), ..cached }, false);
+            publish(&app, cached, false);
             return;
         }
 
-        let lyrics = match fetch(&snap).await {
-            Ok(Some(rec)) => match rec.synced.filter(|s| !s.is_empty()) {
-                Some(s) => Lyrics { track_key: key.clone(), status: "synced".into(), source: "lrclib".into(), lines: parse_lrc(&s), local_mtime: None },
-                None => Lyrics {
-                    track_key: key.clone(),
-                    status: "plain".into(),
-                    source: "lrclib".into(),
-                    lines: plain_lines(&rec.plain.unwrap_or_default()),
-                    local_mtime: None,
-                },
-            },
-            Ok(None) => status_only(&key, "none"),
-            Err(_) => {
-                publish(&app, status_only(&key, "error"), false);
-                return;
-            }
+        let Ok(lookup) = find(&snap).await else {
+            publish(&app, status_only(&key, "error"), false);
+            return;
         };
-        if let Some(p) = path {
-            if let Ok(b) = serde_json::to_vec(&lyrics) {
+        let lyrics = lyrics_from(&key, lookup.found);
+        // Lyrics are always worth remembering; "none" only when no source was down.
+        if lyrics.status != "none" || lookup.complete {
+            if let (Some(p), Ok(b)) = (path, serde_json::to_vec(&lyrics)) {
                 let _ = std::fs::write(p, b);
             }
         }
@@ -379,5 +440,65 @@ mod tests {
     #[test]
     fn sanitizes_file_names() {
         assert_eq!(sanitize("AC/DC: Live?"), "AC_DC_ Live_");
+    }
+
+    fn rec(synced: Option<&str>, plain: Option<&str>) -> LrclibRecord {
+        LrclibRecord { synced: synced.map(String::from), plain: plain.map(String::from) }
+    }
+
+    #[test]
+    fn qq_text_with_timestamps_is_used_straight_away() {
+        let f = qq_synced(&Ok(Some("[00:01.00]hi".into()))).unwrap();
+        assert_eq!((f.source, f.synced.as_deref()), ("qq", Some("[00:01.00]hi")));
+    }
+
+    #[test]
+    fn qq_text_without_timestamps_is_not_enough() {
+        assert!(qq_synced(&Ok(Some("just words".into()))).is_none());
+        assert!(qq_synced(&Ok(None)).is_none());
+        assert!(qq_synced(&Err("down".into())).is_none());
+    }
+
+    #[test]
+    fn lrclib_synced_beats_qq_plain_text() {
+        let l = merge(Ok(Some("words".into())), Ok(Some(rec(Some("[00:01.00]hi"), None)))).unwrap();
+        let f = l.found.unwrap();
+        assert_eq!((f.source, f.synced.as_deref()), ("lrclib", Some("[00:01.00]hi")));
+        assert!(l.complete);
+    }
+
+    #[test]
+    fn qq_plain_text_beats_lrclib_plain_text() {
+        let l = merge(Ok(Some("qq words".into())), Ok(Some(rec(None, Some("lrclib words"))))).unwrap();
+        let f = l.found.unwrap();
+        assert_eq!((f.source, f.plain.as_deref(), f.synced), ("qq", Some("qq words"), None));
+    }
+
+    #[test]
+    fn lrclib_plain_text_is_used_when_qq_has_nothing() {
+        let f = merge(Ok(None), Ok(Some(rec(None, Some("lrclib words"))))).unwrap().found.unwrap();
+        assert_eq!((f.source, f.plain.as_deref()), ("lrclib", Some("lrclib words")));
+    }
+
+    #[test]
+    fn no_lyrics_is_only_final_when_both_sources_answered() {
+        let both = merge(Ok(None), Ok(None)).unwrap();
+        assert!(both.found.is_none() && both.complete);
+        let one_down = merge(Err("down".into()), Ok(None)).unwrap();
+        assert!(one_down.found.is_none() && !one_down.complete);
+    }
+
+    #[test]
+    fn one_source_down_still_uses_the_other() {
+        let l = merge(Err("down".into()), Ok(Some(rec(Some("[00:01.00]hi"), None)))).unwrap();
+        assert_eq!(l.found.unwrap().source, "lrclib");
+        assert!(!l.complete);
+        let q = merge(Ok(Some("words".into())), Err("down".into())).unwrap();
+        assert_eq!(q.found.unwrap().source, "qq");
+    }
+
+    #[test]
+    fn both_sources_failing_is_an_error() {
+        assert!(merge(Err("a".into()), Err("b".into())).is_err());
     }
 }

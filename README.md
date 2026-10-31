@@ -75,9 +75,10 @@ kRon looks in this order:
 
 1. **Your own files** in `Music\kRon Lyrics`
 2. **Its saved copy** of lyrics it already downloaded
-3. **[LRCLIB](https://lrclib.net)**, a free, open database of synced lyrics
+3. **QQ Music**, the main online source
+4. **[LRCLIB](https://lrclib.net)**, a free, open database of synced lyrics, used when QQ Music has no timestamped lyrics for the song
 
-That automatic lookup uses LRCLIB only. If it finds nothing, or the wrong version, use **Search for lyrics** (below): it also searches **QQ Music**, and what you apply is saved as your own file, which then comes first.
+QQ Music is not an official public service, so it may stop working or not allow this use; kRon then falls back to LRCLIB. Both are sent the song's title and artist (QQ Music is run by Tencent). If the automatic lookup finds nothing, or the wrong version, use **Search for lyrics** (below): what you apply is saved as your own file, which then comes first.
 
 Name a file `Artist - Title.lrc` (or `.txt`, or just `Title.lrc`) and kRon uses it, picking up edits within a few seconds. Synced lines look like this:
 
@@ -226,4 +227,4 @@ MIT. See [LICENSE](LICENSE).
 
 ## Credits
 
-Lyrics from [LRCLIB](https://lrclib.net) and, in the search window, QQ Music. kRon isn't affiliated with either. Inspired by [Nusa](https://rama2555.github.io/nusa/).
+Lyrics from QQ Music and [LRCLIB](https://lrclib.net). kRon isn't affiliated with either. Inspired by [Nusa](https://rama2555.github.io/nusa/).
