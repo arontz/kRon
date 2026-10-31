@@ -1,0 +1,99 @@
+name: Android
+
+# Every push or PR that touches android/ builds a debug APK (downloadable from the run).
+# Pushing a tag like android-v0.1.0 builds a signed APK and publishes it as a GitHub Release.
+# Android releases are never marked "latest", so the Windows app's update check and the site keep
+# pointing at the Windows installer.
+on:
+  push:
+    branches: ['**']
+    tags: ['android-v*']
+    paths: ['android/**', '.github/workflows/android.yml']
+  pull_request:
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: android
+
+jobs:
+  debug:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build debug APK
+        run: ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kRon-android-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/android-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KRON_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KRON_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KRON_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for v in KEYSTORE_BASE64 KRON_KEYSTORE_PASSWORD KRON_KEY_ALIAS KRON_KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Secret for $v is missing. See android/README.md."; exit 1; fi
+          done
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/kron.jks"
+
+      - name: Build signed APK
+        env:
+          KRON_KEYSTORE_PATH: ${{ runner.temp }}/kron.jks
+          KRON_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KRON_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KRON_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          VERSION="${TAG#android-v}"
+          ./gradlew --no-daemon assembleRelease -PkronVersion="$VERSION"
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk
+          mv app/build/outputs/apk/release/app-release.apk "kRon-android-$VERSION.apk"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publish the GitHub Release
+        run: |
+          SHA="$(sha256sum "kRon-android-$VERSION.apk" | cut -d' ' -f1)"
+          {
+            echo "kRon for Android $VERSION. Download the APK below and open it on your phone."
+            echo
+            echo "Android asks you to allow installs from your browser or file manager the first time."
+            echo "To turn on notification access afterwards, open App info, tap the menu, then Allow restricted settings."
+            echo
+            echo "SHA-256: \`$SHA\`"
+          } > release-notes.md
+          gh release create "$TAG" "kRon-android-$VERSION.apk" \
+            --title "kRon for Android $VERSION" --notes-file release-notes.md --latest=false
+      - name: Remove the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/kron.jks"
