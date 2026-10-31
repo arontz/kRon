@@ -6,18 +6,23 @@ import org.junit.Test
 
 class ListenerRebindTest {
     @Test
-    fun grantedButNotConnectedAsksForARebind() {
-        assertTrue(shouldRequestRebind(granted = true, connected = false))
+    fun grantedButStillNotConnectedAsksOnce() {
+        assertTrue(shouldRequestRebind(granted = true, connected = false, alreadyTried = false))
+    }
+
+    @Test
+    fun neverAsksTwiceInTheSameProcess() {
+        assertFalse(shouldRequestRebind(granted = true, connected = false, alreadyTried = true))
     }
 
     @Test
     fun alreadyConnectedNeedsNothing() {
-        assertFalse(shouldRequestRebind(granted = true, connected = true))
+        assertFalse(shouldRequestRebind(granted = true, connected = true, alreadyTried = false))
     }
 
     @Test
     fun withoutAccessThereIsNothingToRebind() {
-        assertFalse(shouldRequestRebind(granted = false, connected = false))
-        assertFalse(shouldRequestRebind(granted = false, connected = true))
+        assertFalse(shouldRequestRebind(granted = false, connected = false, alreadyTried = false))
+        assertFalse(shouldRequestRebind(granted = false, connected = true, alreadyTried = false))
     }
 }
