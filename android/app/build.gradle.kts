@@ -25,7 +25,7 @@ val canSignRelease = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAl
 
 // versionCode is derived from versionName (0.2.1 -> 201) so it always rises with the version, and the CI tag
 // check (android-vX.Y.Z must equal appVersionName) keeps the update checker honest.
-val appVersionName = "0.1.1"
+val appVersionName = "0.1.2"
 val appVersionCode = appVersionName.split(".").map(String::toInt).let { (major, minor, patch) -> major * 10000 + minor * 100 + patch }
 
 android {

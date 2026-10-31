@@ -42,7 +42,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import app.kron.lyrics.log.LogEntry
+import app.kron.lyrics.log.LogKind
 import app.kron.lyrics.log.activityLog
+import app.kron.lyrics.media.ListenerConnection
+import app.kron.lyrics.media.requestListenerRebind
+import app.kron.lyrics.media.shouldRequestRebind
 import app.kron.lyrics.update.UpdateChecker
 import app.kron.lyrics.update.UpdateResult
 import app.kron.lyrics.update.updateMessage
@@ -102,6 +106,10 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         listenerGranted = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
         overlayGranted = Settings.canDrawOverlays(this)
+        if (shouldRequestRebind(listenerGranted, ListenerConnection.connected)) {
+            activityLog.add(LogKind.SERVICE, "Notification access is on but not connected, asking Android to reconnect")
+            requestListenerRebind(this)
+        }
     }
 }
 
