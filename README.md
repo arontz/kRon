@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="app-icon.svg" alt="kRon logo" width="110" />
+
 # kRon
 
 **Music, synced lyrics and a system overview, right on the Windows taskbar.**
@@ -9,6 +11,8 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078d4)
 ![Built with](https://img.shields.io/badge/built%20with-Tauri%202%20%2B%20Rust-dea584)
 ![Status](https://img.shields.io/badge/status-early%20development-orange)
+[![Downloads](https://img.shields.io/github/downloads/arontz/kRon/total?label=downloads&color=7fe0c6)](https://github.com/arontz/kRon/releases)
+[![Ko-fi](https://img.shields.io/badge/support-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/kronzo)
 
 </div>
 
@@ -209,6 +213,16 @@ src/
 - [ ] Real acrylic blur on the hover panel
 - [ ] Top and bottom edge docking, auto-hide taskbar and multiple monitors
 - [ ] Automatic in-app updates (the tray's **Check for updates…** currently opens the download page)
+
+## Support
+
+If kRon is useful to you, you can support its development on Ko-fi.
+
+<a href="https://ko-fi.com/kronzo" target="_blank"><img height="36" style="border:0px;height:36px;" src="https://storage.ko-fi.com/cdn/kofi3.png?v=3" alt="Support me on Ko-fi" /></a>
+
+## License
+
+MIT. See [LICENSE](LICENSE).
 
 ## Credits
 

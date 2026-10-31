@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kRon: music, lyrics and system stats on the Windows taskbar</title>
+<meta name="description" content="kRon is a small pill next to your Windows system tray that shows what's playing, with synced lyrics and a CPU / RAM / network overview. Free and open source.">
+<link rel="icon" href="app-icon.svg" type="image/svg+xml">
+<meta property="og:title" content="kRon: music and lyrics on your taskbar">
+<meta property="og:description" content="A small pill next to your Windows system tray that shows what's playing, with synced lyrics. Free and open source.">
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="site.css?v=a8e5ef4159">
+<script src="demo/hub.js?v=a8e5ef4159"></script>
+<script>
+// Each demo frame below runs kRon's real interface files against its own sample player (see demo/hub.js).
+KronDemo.configure('main',  { flyoutOpen: true, settings: { lyr_place: 'taskbar' } });
+KronDemo.configure('pm',    { settings: { lyr_place: 'desktop' }, flyoutOpen: false });
+KronDemo.configure('pl',    { settings: { lyr_place: 'taskbar' }, track: 1, position_ms: 31500 });
+KronDemo.configure('ps',    { settings: { page: 'system' }, track: 2, position_ms: 26000 });
+KronDemo.configure('fm',    { settings: { lyr_place: 'desktop' }, flyoutOpen: true });
+KronDemo.configure('fs',    { settings: { page: 'system' }, flyoutOpen: true, track: 2, position_ms: 26000 });
+KronDemo.configure('fa',    { settings: { page: 'appearance' }, flyoutOpen: true, track: 1, position_ms: 31500 });
+KronDemo.configure('ov',    { settings: { lyr_place: 'desktop', lyr_lines: 5, lyr_scale: 0.85 }, track: 0, position_ms: 34000 });
+KronDemo.configure('tb',    { flyoutOpen: true, settings: { lyr_place: 'desktop' }, track: 1, position_ms: 24000 });
+KronDemo.configure('miss',  { flyoutOpen: true, playlist: [3, 4], track: 0, position_ms: 0, settings: { lyr_place: 'desktop' } });
+</script>
+</head>
+<body>
+<a class="skip" href="#features">Skip to content</a>
+
+<div class="frame">
+  <header class="site">
+    <a class="brand" href="#top"><img src="app-icon.svg" alt="" width="32" height="32">kRon</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="#showcase">Look</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li class="keep"><a href="https://github.com/arontz/kRon">GitHub</a></li>
+      </ul>
+    </nav>
+  </header>
+</div>
+
+<main id="top">
+
+<section class="hero frame grid" aria-labelledby="h1">
+  <h1 id="h1" class="t-display" data-rise>Music and lyrics, on your taskbar.</h1>
+  <div class="hero-copy">
+    <p class="t-lead" data-rise style="--i:1">kRon is a small pill next to your system tray. It shows what&rsquo;s playing, with synced lyrics, and opens a panel when you hover it.</p>
+    <div class="act" data-rise style="--i:2">
+      <a class="btn" href="https://github.com/arontz/kRon/releases/latest">Download for Windows</a>
+      <p class="fine">Free and open source. Windows 10 and 11.</p>
+      <p class="dlcount" id="dlcount" hidden></p>
+    </div>
+    <p class="note" data-rise style="--i:3"><b>This is kRon itself,</b> running here with sample songs. Press play, drag the seek bar, click a lyric, or switch the panel&rsquo;s page with the side arrows.</p>
+  </div>
+  <div class="stage" id="stage">
+    <div class="panelwrap" data-ui>
+      <iframe class="live" title="kRon hover panel, running with sample data" src="demo/flyout.html?hub=main&amp;v=a8e5ef4159" width="440" height="463"></iframe>
+    </div>
+    <div class="tbar" data-ui>
+      <span class="apps" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="tray"><iframe class="live" title="kRon pill, running with sample data" src="demo/pill.html?hub=main&amp;v=a8e5ef4159" width="340" height="40"></iframe><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></span>
+    </div>
+  </div>
+</section>
+
+<section class="showcase" id="showcase" aria-labelledby="h-look">
+ <div class="pin-inner" id="pin-inner">
+  <div class="frame">
+    <div class="head">
+      <h2 id="h-look" class="t-head">Every part, running.</h2>
+      <div class="cap"><div id="cap-live" aria-live="polite"><h3 id="cap-name">Now playing, on the pill</h3><p id="cap-text">Album art, title, artist and the controls, always in sight next to the tray.</p></div><button type="button" class="pinbtn" id="pin-toggle" aria-pressed="false">Pause sideways scroll</button></div>
+    </div>
+  </div>
+  <div class="row" id="row" tabindex="0" aria-label="kRon's parts. Keep scrolling down to move through them, or use the arrow keys.">
+    <div class="item lit" data-name="Now playing, on the pill" data-text="Album art, title, artist and the controls, always in sight next to the tray.">
+      <div class="stand" data-ui><iframe class="live" data-fit="1.5" title="Pill showing the current track" data-src="demo/pill.html?hub=pm&amp;v=a8e5ef4159" width="340" height="40"></iframe></div>
+    </div>
+    <div class="item" data-name="Lyrics on the pill" data-text="The current line replaces the title. Long lines scroll sideways while they are sung.">
+      <div class="stand" data-ui><iframe class="live" data-fit="1.5" title="Pill showing the current lyric line" data-src="demo/pill.html?hub=pl&amp;v=a8e5ef4159" width="340" height="40"></iframe></div>
+    </div>
+    <div class="item" data-name="System, on the pill" data-text="Switch the pill to a CPU, memory and network readout.">
+      <div class="stand" data-ui><iframe class="live" data-fit="1.5" title="Pill showing system stats" data-src="demo/pill.html?hub=ps&amp;v=a8e5ef4159" width="340" height="40"></iframe></div>
+    </div>
+    <div class="item flyout" data-name="The hover panel" data-text="Seek, shuffle, repeat, and three lines of lyrics you can click to jump to that part of the song.">
+      <div data-ui><iframe class="live" title="Hover panel, now playing page" data-src="demo/flyout.html?hub=fm&amp;v=a8e5ef4159" width="440" height="463"></iframe></div>
+    </div>
+    <div class="item flyout" data-name="The system page" data-text="A live CPU graph, memory used, and download and upload speed.">
+      <div data-ui><iframe class="live" title="Hover panel, system page" data-src="demo/flyout.html?hub=fs&amp;v=a8e5ef4159" width="440" height="274"></iframe></div>
+    </div>
+    <div class="item flyout" data-name="Make it match" data-text="Dark or light, your accent colour, and your own lyric colours.">
+      <div data-ui><iframe class="live" title="Hover panel, appearance page" data-src="demo/flyout.html?hub=fa&amp;v=a8e5ef4159" width="440" height="463"></iframe></div>
+    </div>
+    <div class="item" data-name="Lyrics on the desktop" data-text="Three or five lines in the corner with no background. Sung words light up, and clicks pass through.">
+      <div class="tile desk" data-ui><div class="win"></div><iframe class="live" title="Desktop lyrics" data-src="demo/overlay.html?hub=ov&amp;v=a8e5ef4159" width="680" height="200"></iframe></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<section class="features frame grid" id="features" aria-labelledby="h-feat">
+  <div class="fl">
+    <h2 id="h-feat" class="t-head" data-rise>Three parts, one player</h2>
+    <p class="t-lead sub" data-rise style="--i:1">Point at a part in the table to see it running, and what each one shows.</p>
+    <div class="pv" id="pv" data-sel="pill">
+      <div class="pvs on" data-part="pill"><div class="loupe" data-ui><iframe class="live" data-fit="1.5" title="The pill, enlarged" data-src="demo/pill.html?hub=tb&amp;v=a8e5ef4159" width="340" height="40"></iframe><p>Enlarged. Real size on the taskbar below.</p></div><div class="pvbar" data-ui><span class="apps" aria-hidden="true"><i></i><i></i><i></i></span><span class="tray"><iframe class="live" title="The pill" data-src="demo/pill.html?hub=tb&amp;v=a8e5ef4159" width="340" height="40"></iframe><i aria-hidden="true"></i><i aria-hidden="true"></i></span></div></div>
+      <div class="pvs" data-part="panel"><div class="pvfly" data-ui><iframe class="live" title="The panel" data-src="demo/flyout.html?hub=tb&amp;v=a8e5ef4159" width="440" height="463"></iframe></div></div>
+      <div class="pvs" data-part="lyrics"><div class="tile desk" data-ui><div class="win"></div><iframe class="live" title="Desktop lyrics" data-src="demo/overlay.html?hub=tb&amp;v=a8e5ef4159" width="680" height="200"></iframe></div></div>
+    </div>
+    <p class="pvcap" id="pvcap" aria-live="polite"><b>The pill</b> sits on your taskbar, next to the tray. It is always there.</p>
+  </div>
+  <div class="tbl" id="tbl" data-sel="pill" role="table" aria-label="What each part of kRon shows">
+  <div class="r" role="row">
+    <div class="colhead corner" role="columnheader" aria-label="Part"></div>
+    <div class="colhead" role="columnheader" data-part="pill"><button type="button" data-part="pill" aria-pressed="true">Pill<span>On the taskbar</span></button></div>
+    <div class="colhead" role="columnheader" data-part="panel"><button type="button" data-part="panel" aria-pressed="false">Panel<span>When you hover</span></button></div>
+    <div class="colhead" role="columnheader" data-part="lyrics"><button type="button" data-part="lyrics" aria-pressed="false">Desktop lyrics<span>On your desktop</span></button></div>
+  </div>
+  <div class="r" role="row">
+    <div class="rowname" role="rowheader">The track</div>
+    <div class="cell" role="cell" data-part="pill" data-col="Pill">Art, title and artist</div>
+    <div class="cell" role="cell" data-part="panel" data-col="Panel">Large art, title, artist, album and source</div>
+    <div class="cell" role="cell" data-part="lyrics" data-col="Desktop lyrics">Not shown</div>
+  </div>
+  <div class="r" role="row">
+    <div class="rowname" role="rowheader">Controls</div>
+    <div class="cell" role="cell" data-part="pill" data-col="Pill">Previous, play, next</div>
+    <div class="cell" role="cell" data-part="panel" data-col="Panel">Seek bar, shuffle, repeat, previous, play, next</div>
+    <div class="cell" role="cell" data-part="lyrics" data-col="Desktop lyrics">None. Clicks pass through to what is underneath</div>
+  </div>
+  <div class="r" role="row">
+    <div class="rowname" role="rowheader">Lyrics</div>
+    <div class="cell" role="cell" data-part="pill" data-col="Pill">One line replaces the title</div>
+    <div class="cell" role="cell" data-part="panel" data-col="Panel">Three lines. Click one to jump there</div>
+    <div class="cell" role="cell" data-part="lyrics" data-col="Desktop lyrics">Three or five lines. Sung words light up</div>
+  </div>
+  <div class="r" role="row">
+    <div class="rowname" role="rowheader">System</div>
+    <div class="cell" role="cell" data-part="pill" data-col="Pill">CPU, memory, download and upload</div>
+    <div class="cell" role="cell" data-part="panel" data-col="Panel">Live CPU graph, memory used, speeds</div>
+    <div class="cell" role="cell" data-part="lyrics" data-col="Desktop lyrics">Not shown</div>
+  </div>
+  <div class="r" role="row">
+    <div class="rowname" role="rowheader">Where it sits</div>
+    <div class="cell" role="cell" data-part="pill" data-col="Pill">Next to the tray, or dragged anywhere</div>
+    <div class="cell" role="cell" data-part="panel" data-col="Panel">Opens above the pill when you hover</div>
+    <div class="cell" role="cell" data-part="lyrics" data-col="Desktop lyrics">Bottom-right corner, or dragged anywhere</div>
+  </div>
+  <div class="r" role="row">
+    <div class="rowname" role="rowheader">Your look</div>
+    <div class="cell" role="cell" data-part="pill" data-col="Pill">Follows your light or dark taskbar</div>
+    <div class="cell" role="cell" data-part="panel" data-col="Panel">Dark or light, your accent colour</div>
+    <div class="cell" role="cell" data-part="lyrics" data-col="Desktop lyrics">Your colours, size and timing</div>
+  </div>
+  </div>
+</section>
+
+<section class="missing frame" id="missing" aria-labelledby="h-miss">
+  <div class="mhead grid">
+    <h2 id="h-miss" class="t-head" data-rise>No lyrics? Find them, or write your own.</h2>
+    <div class="mtext">
+      <ol class="steps" data-rise style="--i:1">
+      <li>kRon looks in your own files, then in what it saved, then on LRCLIB.</li>
+      <li>Nothing yet? Press the magnifier in the panel. It searches LRCLIB and QQ Music, and you pick the version that fits.</li>
+      <li>Still nothing? Press + and write them yourself. Put a time before each line, save, and kRon sings along.</li>
+    </ol>
+      <p class="try" data-rise style="--i:2"><b>Try it.</b> Neither song here has lyrics yet. Press <b>Search</b> on the desktop, or the magnifier in the panel, and pick a result. Then press next for the second song, which no search can find, and press + to write your own.</p>
+    </div>
+  </div>
+  <div class="ldesk" id="desk">
+    <button type="button" class="dreset" id="desk-reset">Reset demo</button>
+    <div class="dover" data-ui><iframe class="live" data-fit="1.7" title="Desktop lyrics, with no lyrics found yet" data-src="demo/overlay.html?hub=miss&amp;v=a8e5ef4159" width="680" height="200"></iframe></div>
+    <div class="dfly" data-ui><iframe class="live" title="Panel for a song with no lyrics" data-src="demo/flyout.html?hub=miss&amp;v=a8e5ef4159" width="440" height="463"></iframe></div>
+    <div class="dbar" data-ui><span class="apps" aria-hidden="true"><i></i><i></i><i></i></span><span class="tray"><iframe class="live" title="Pill" data-src="demo/pill.html?hub=miss&amp;v=a8e5ef4159" width="340" height="40"></iframe><i aria-hidden="true"></i><i aria-hidden="true"></i></span></div>
+    <div class="dwin" id="sim-search" role="dialog" aria-label="Search for lyrics" hidden>
+      <div class="simbar"><span>Search for lyrics</span><button type="button" class="simclose" data-close>Close</button></div>
+      <div class="simbody" id="simbody"><iframe id="searchframe" title="Search for lyrics window" data-url="demo/lyrsearch.html?hub=miss&amp;v=a8e5ef4159" width="1000" height="600"></iframe></div>
+      <p class="simnote">This window is built for a desktop screen. On a phone, scroll it sideways and down to reach OK.</p>
+    </div>
+    <div class="dwin dwin-edit" id="sim-edit" role="dialog" aria-label="Lyrics file" hidden>
+      <div class="simbar"><span id="edit-title">Lyrics file</span><button type="button" class="simclose" data-close>Close</button></div>
+      <textarea id="editor" spellcheck="false" aria-label="Lyrics file"></textarea>
+      <div class="simfoot"><button type="button" class="btn" id="save">Save</button><span id="edit-status" role="status">In the app this opens in Notepad. Save, and kRon picks the file up.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="faq frame" id="faq" aria-labelledby="h-faq">
+  <h2 id="h-faq" class="t-head" data-rise>Good to know</h2>
+  <dl class="qa">
+    <div data-rise style="--i:0"><dt>Does it work with Spotify?</dt><dd>Yes. kRon reads Windows media controls, so Spotify, Apple Music, browsers and Media Player all show up.</dd></div>
+    <div data-rise style="--i:1"><dt>Is it free?</dt><dd>Yes. It is open source under the MIT license.</dd></div>
+    <div data-rise style="--i:2"><dt>Which Windows versions?</dt><dd>Windows 10 and Windows 11.</dd></div>
+    <div data-rise style="--i:0"><dt>Where do lyrics come from?</dt><dd>Your own .lrc files first, then lyrics kRon already saved, then LRCLIB, a free open database of synced lyrics.</dd></div>
+    <div data-rise style="--i:1"><dt>Why does Windows warn me?</dt><dd>Releases aren&rsquo;t code-signed yet, so Windows and some antivirus tools treat the installer as unknown. We are applying for free signing.</dd></div>
+    <div data-rise style="--i:2"><dt>Does it track me?</dt><dd>No accounts, no analytics, no telemetry. The privacy section says exactly when it goes online.</dd></div>
+  </dl>
+</section>
+
+
+
+</main>
+
+<footer class="sitefoot" aria-label="Footer">
+  <div class="frame">
+    <div class="ftrust grid">
+  <div class="blk" id="signing" role="region" aria-labelledby="h-sign">
+    <h2 id="h-sign" class="t-sub">Code signing policy</h2>
+    <div class="txt t-lead">
+      <p>We are applying for free code signing for open-source projects from <a href="https://signpath.org">SignPath Foundation</a>, with signing performed by <a href="https://signpath.io">SignPath.io</a>. <b>Until the first signed release is published, installers are unsigned.</b> This section will be updated when that happens.</p>
+      <ul>
+        <li>Releases are built from the public source by GitHub Actions in <a href="https://github.com/arontz/kRon">arontz/kRon</a>, then signed. Nothing is built or signed by hand.</li>
+        <li>The signing request is made by the release workflow when a version tag is pushed.</li>
+        <li><b>Maintainer, reviewer and approver:</b> <a href="https://github.com/arontz">arontz</a>.</li>
+        <li>Only the installer is signed at first. The installed app and the uninstaller are not yet.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="blk" id="privacy" role="region" aria-labelledby="h-priv">
+    <h2 id="h-priv" class="t-sub">Privacy</h2>
+    <div class="txt t-lead">
+      <p>kRon has no accounts, no analytics and no telemetry. What you play, your settings and the lyrics it saves stay on your PC. It only talks to the internet in these cases:</p>
+      <ul>
+        <li><b>Finding lyrics:</b> when a song starts and no lyrics are saved, it asks <a href="https://lrclib.net">LRCLIB</a> for them, sending the song&rsquo;s title, artist, album and length.</li>
+        <li><b>Search for lyrics:</b> only when you use it, it sends your search text to LRCLIB and to QQ Music.</li>
+        <li><b>Check for updates:</b> only when you click it in the tray menu, it asks the GitHub API for the latest release.</li>
+      </ul>
+      <p>The demo on this page is kRon&rsquo;s own interface running on sample songs, numbers and search results (all made up). It plays no audio. The only thing this page fetches is the download count, from the public GitHub API.</p>
+    </div>
+  </div>
+    </div>
+    <div class="fcols grid">
+      <div class="fbrand">
+        <a class="brand" href="#top"><img src="app-icon.svg" alt="" width="32" height="32">kRon</a>
+        <p>Music, synced lyrics and system stats, right on the Windows taskbar.</p>
+        <a class="btn" href="https://github.com/arontz/kRon/releases/latest">Download for Windows</a>
+      </div>
+      <nav class="fcol" aria-label="Product">
+        <h3>Product</h3>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="https://github.com/arontz/kRon/releases">All releases</a></li>
+          <li><a href="https://github.com/arontz/kRon/blob/main/CHANGELOG.md">What&rsquo;s new</a></li>
+        </ul>
+      </nav>
+      <nav class="fcol" aria-label="Project">
+        <h3>Project</h3>
+        <ul>
+          <li><a href="https://github.com/arontz/kRon">Source on GitHub</a></li>
+          <li><a href="https://github.com/arontz/kRon/issues">Report a problem</a></li>
+          <li><a href="https://github.com/arontz/kRon/blob/main/LICENSE">MIT license</a></li>
+          <li><a href="#signing">Code signing policy</a></li>
+        </ul>
+      </nav>
+      <nav class="fcol" aria-label="More">
+        <h3>More</h3>
+        <ul>
+          <li><a href="#privacy">Privacy</a></li>
+          <li><a href="https://ko-fi.com/kronzo">Support on Ko-fi</a></li>
+          <li><a href="https://lrclib.net">LRCLIB, where lyrics come from</a></li>
+          <li><a href="https://rama2555.github.io/nusa/">Inspired by Nusa</a></li>
+        </ul>
+      </nav>
+    </div>
+    <p class="fword" aria-hidden="true"><span class="k">k</span>Ron</p>
+    <div class="fbottom">
+      <span>&copy; 2026 Ronzo. Free and open source under the MIT license.</span>
+      <span>Not affiliated with Microsoft. Windows is a trademark of Microsoft Corporation.</span>
+    </div>
+  </div>
+</footer>
+
+<a class="totop" id="totop" href="#top" aria-label="Back to top">Back to top</a>
+<div id="toast" role="status" aria-live="polite" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:var(--accent-ink);padding:14px 20px;font-size:16px;max-width:min(520px,90vw);opacity:0;pointer-events:none;transition:opacity 200ms linear"></div>
+
+<script src="site.js?v=a8e5ef4159"></script>
+</body>
+</html>
