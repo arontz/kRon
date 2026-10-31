@@ -47,6 +47,7 @@ import app.kron.lyrics.log.LogKind
 import app.kron.lyrics.log.activityLog
 import app.kron.lyrics.media.ListenerConnection
 import app.kron.lyrics.media.ListenerStatus
+import app.kron.lyrics.media.RECONNECT_GRACE_MS
 import app.kron.lyrics.media.listenerStatus
 import app.kron.lyrics.media.requestListenerRebind
 import app.kron.lyrics.media.shouldRequestRebind
@@ -79,10 +80,17 @@ class MainActivity : ComponentActivity() {
                     var reconnectHelp by remember { mutableStateOf(false) }
                     LaunchedEffect(status) {
                         reconnectHelp = false
-                        if (status == ListenerStatus.NotConnected) {
-                            delay(3_000)
-                            reconnectHelp = true
+                        if (status != ListenerStatus.NotConnected) return@LaunchedEffect
+                        delay(RECONNECT_GRACE_MS) // Android usually connects the listener by itself within a moment
+                        if (ListenerConnection.connected) return@LaunchedEffect
+                        if (shouldRequestRebind(listenerGranted, ListenerConnection.connected, ListenerConnection.rebindTried)) {
+                            ListenerConnection.rebindTried = true
+                            activityLog.add(LogKind.SERVICE, "Notification access is on but still not connected, switching the listener off and on")
+                            requestListenerRebind(this@MainActivity)
+                            delay(RECONNECT_GRACE_MS)
+                            if (ListenerConnection.connected) return@LaunchedEffect
                         }
+                        reconnectHelp = true
                     }
                     if (showLog) {
                         BackHandler { showLog = false }
@@ -123,10 +131,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         listenerGranted = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
         overlayGranted = Settings.canDrawOverlays(this)
-        if (shouldRequestRebind(listenerGranted, ListenerConnection.connected)) {
-            activityLog.add(LogKind.SERVICE, "Notification access is on but not connected, asking Android to reconnect")
-            requestListenerRebind(this)
-        }
     }
 }
 

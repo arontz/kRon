@@ -18,6 +18,10 @@ object ListenerConnection {
         set(value) {
             flow.value = value
         }
+
+    /** Set once [requestListenerRebind] has run in this process, so it is never repeated. */
+    @Volatile
+    var rebindTried = false
 }
 
 enum class ListenerStatus {
@@ -37,12 +41,17 @@ fun listenerStatus(granted: Boolean, connected: Boolean): ListenerStatus = when 
     else -> ListenerStatus.NotConnected
 }
 
+/** How long to give Android to connect the listener by itself before trying anything. */
+const val RECONNECT_GRACE_MS = 3_000L
+
 /**
  * After an app update Android sometimes leaves an enabled notification listener unbound until the user switches
- * the permission off and on. Asking for a rebind when access is granted but the service is not connected is the
- * attempt to avoid that.
+ * the permission off and on. Switching the component off and on is the attempt to avoid that, and it can disturb a
+ * listener Android is just then binding, so it is only worth doing when access is granted, the service is still not
+ * connected after [RECONNECT_GRACE_MS], and it has not been tried in this process already.
  */
-fun shouldRequestRebind(granted: Boolean, connected: Boolean): Boolean = granted && !connected
+fun shouldRequestRebind(granted: Boolean, connected: Boolean, alreadyTried: Boolean): Boolean =
+    granted && !connected && !alreadyTried
 
 /**
  * Switches the listener component off and on again. That is a package change, which makes Android re-bind every
