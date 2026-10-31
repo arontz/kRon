@@ -4,7 +4,9 @@ import android.content.Context
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
+import app.kron.lyrics.lyrics.FallbackFetcher
 import app.kron.lyrics.lyrics.LrclibFetcher
+import app.kron.lyrics.lyrics.QqMusicFetcher
 import app.kron.lyrics.lyrics.LyricsCache
 import app.kron.lyrics.lyrics.LyricsLoader
 import app.kron.lyrics.lyrics.LyricsRepository
@@ -61,7 +63,7 @@ class OverlayHost(private val context: Context) {
         }
         val s = CoroutineScope(SupervisorJob() + Dispatchers.Main + handler)
         val c = OverlayController(context, CardPositionStore(context.getSharedPreferences("card", Context.MODE_PRIVATE)))
-        val loader = LyricsLoader(s, LyricsRepository(LrclibFetcher(), LyricsCache(File(context.cacheDir, "lyrics"))))
+        val loader = LyricsLoader(s, LyricsRepository(FallbackFetcher(QqMusicFetcher(), LrclibFetcher()), LyricsCache(File(context.cacheDir, "lyrics"))))
         scope = s
         controller = c
 
