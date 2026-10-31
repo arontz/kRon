@@ -28,6 +28,10 @@ android {
     }
 
     signingConfigs {
+        // A fixed debug key, so each CI test build installs over the last one. Not secret.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+        }
         if (keystorePath != null) {
             create("release") {
                 storeFile = file(keystorePath)

@@ -28,10 +28,8 @@ class MediaListenerService : NotificationListenerService() {
 
     private val callback = object : MediaController.Callback() {
         override fun onMetadataChanged(metadata: MediaMetadata?) = refresh()
-        override fun onPlaybackStateChanged(state: PlaybackState?) {
-            // Another session may have started playing; switch to it if so.
-            if (state?.state != PlaybackState.STATE_PLAYING) pick() else refresh()
-        }
+        // Shared by every session, so any change re-picks: another app may have just started playing.
+        override fun onPlaybackStateChanged(state: PlaybackState?) = pick()
         override fun onSessionDestroyed() = pick()
     }
 

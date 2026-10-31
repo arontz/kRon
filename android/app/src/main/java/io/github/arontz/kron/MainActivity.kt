@@ -122,7 +122,7 @@ private fun Home() {
         if (Build.VERSION.SDK_INT >= 33) {
             StepCard(
                 title = "Notifications",
-                why = "kRon shows one quiet notification while the pill is on. Android needs it to keep kRon running.",
+                why = "So you can see kRon is on, and hide the pill from the notification.",
                 done = done.getValue(Step.Notifications),
                 onTurnOn = { askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) },
             )
