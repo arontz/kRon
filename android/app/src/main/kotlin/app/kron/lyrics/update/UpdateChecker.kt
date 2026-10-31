@@ -73,8 +73,8 @@ fun evaluateUpdate(body: String, currentVersion: String): UpdateResult {
 }
 
 fun updateMessage(r: UpdateResult): String = when (r) {
-    is UpdateResult.UpToDate -> "You are up to date (version ${r.current})."
-    is UpdateResult.Available -> "Version ${r.release.version} is available."
+    is UpdateResult.UpToDate -> "You are up to date (v${r.current})."
+    is UpdateResult.Available -> "v${r.release.version} is available."
     UpdateResult.NoReleases -> "No Android release has been published yet."
     is UpdateResult.Failed -> r.reason
 }

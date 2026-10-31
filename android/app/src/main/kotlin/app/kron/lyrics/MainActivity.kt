@@ -164,7 +164,7 @@ fun SetupScreen(
         OutlinedButton(onClick = onOpenLog) { Text("Activity log") }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = onCheckUpdate, enabled = !checking) { Text(if (checking) "Checking…" else "Check for updates") }
-            Text("Version $versionName", fontSize = 13.sp)
+            Text("v$versionName", fontSize = 13.sp)
         }
         if (updateResult != null) {
             Text(updateMessage(updateResult), fontSize = 13.sp)
