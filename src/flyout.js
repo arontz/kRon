@@ -149,7 +149,8 @@
     $('lyr-lines').style.display = synced ? 'flex' : 'none';
     $('lyr-msg').textContent = synced ? '' : s.media.active ? LYR_MSG[s.lyrics.status] || '' : 'Nothing playing';
     const local = s.lyrics.source === 'local';
-    $('lyr-label').textContent = s.lyrics.source ? `Lyrics · ${local ? 'Your file' : 'LRCLIB'}` : 'Lyrics';
+    const SOURCE_NAMES = { local: 'Your file', qq: 'QQ Music', lrclib: 'LRCLIB' };
+    $('lyr-label').textContent = s.lyrics.source ? `Lyrics · ${SOURCE_NAMES[s.lyrics.source] || 'LRCLIB'}` : 'Lyrics';
     $('lyr-add').innerHTML = local ? ICONS.edit : ICONS.plus;
     $('lyr-add').title = local ? 'Edit your lyrics file' : 'Add your own lyrics file';
     for (const a of ['search', 'add', 'reload']) $(`lyr-${a}`).disabled = !s.media.active;

@@ -4,6 +4,7 @@
 mod lyrics;
 mod lyrsearch;
 mod media;
+mod qq;
 mod shell;
 mod stats;
 mod update;
