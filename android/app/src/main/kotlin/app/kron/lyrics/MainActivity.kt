@@ -5,9 +5,12 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +19,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -23,8 +29,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,17 +41,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
+import app.kron.lyrics.log.LogEntry
+import app.kron.lyrics.log.activityLog
+import app.kron.lyrics.update.UpdateChecker
+import app.kron.lyrics.update.UpdateResult
+import app.kron.lyrics.update.updateMessage
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private var listenerGranted by mutableStateOf(false)
     private var overlayGranted by mutableStateOf(false)
+    private var showLog by mutableStateOf(false)
+    private var checking by mutableStateOf(false)
+    private var updateResult by mutableStateOf<UpdateResult?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    SetupScreen(
+                    val scope = rememberCoroutineScope()
+                    if (showLog) {
+                        BackHandler { showLog = false }
+                        val entries by activityLog.entries.collectAsState()
+                        LogScreen(entries = entries, onClear = activityLog::clear, onBack = { showLog = false })
+                    } else SetupScreen(
                         listenerGranted = listenerGranted,
                         overlayGranted = overlayGranted,
                         onOpenListener = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
@@ -52,6 +78,20 @@ class MainActivity : ComponentActivity() {
                         onOpenAppInfo = {
                             startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
                         },
+                        versionName = BuildConfig.VERSION_NAME,
+                        checking = checking,
+                        updateResult = updateResult,
+                        onCheckUpdate = {
+                            if (!checking) {
+                                checking = true
+                                scope.launch {
+                                    updateResult = UpdateChecker(BuildConfig.VERSION_NAME).check()
+                                    checking = false
+                                }
+                            }
+                        },
+                        onOpenDownload = { url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
+                        onOpenLog = { showLog = true },
                     )
                 }
             }
@@ -72,9 +112,15 @@ fun SetupScreen(
     onOpenListener: () -> Unit,
     onOpenOverlay: () -> Unit,
     onOpenAppInfo: () -> Unit,
+    versionName: String,
+    checking: Boolean,
+    updateResult: UpdateResult?,
+    onCheckUpdate: () -> Unit,
+    onOpenDownload: (String) -> Unit,
+    onOpenLog: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.safeDrawingPadding().padding(24.dp),
+        modifier = Modifier.safeDrawingPadding().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("kRon", fontSize = 32.sp, fontWeight = FontWeight.Bold)
@@ -105,6 +151,51 @@ fun SetupScreen(
         Spacer(Modifier.height(8.dp))
         if (listenerGranted && overlayGranted) {
             Text("All set. Play a song in any music app and the lyrics card appears.")
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("What kRon reads and sends", fontWeight = FontWeight.SemiBold)
+        Text(
+            "It reads the title, artist, length and play/pause state of the active media session, and nothing from " +
+                "your notifications. It sends the title, artist and length to lrclib.net to get lyrics, and contacts " +
+                "api.github.com only when you tap \"Check for updates\". It stores only lyrics cached on this device " +
+                "and where you dragged the card.",
+            fontSize = 13.sp,
+        )
+        OutlinedButton(onClick = onOpenLog) { Text("Activity log") }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onCheckUpdate, enabled = !checking) { Text(if (checking) "Checking…" else "Check for updates") }
+            Text("v$versionName", fontSize = 13.sp)
+        }
+        if (updateResult != null) {
+            Text(updateMessage(updateResult), fontSize = 13.sp)
+            if (updateResult is UpdateResult.Available) {
+                Button(onClick = { onOpenDownload(updateResult.release.pageUrl) }) { Text("Open download page") }
+            }
+        }
+    }
+}
+
+@Composable
+fun LogScreen(entries: List<LogEntry>, onClear: () -> Unit, onBack: () -> Unit) {
+    val clock = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+    Column(modifier = Modifier.safeDrawingPadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Activity log", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Everything kRon read or sent since it started, newest first. Kept in memory only; it is gone when the app closes.",
+            fontSize = 13.sp,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onBack) { Text("Back") }
+            OutlinedButton(onClick = onClear) { Text("Clear") }
+        }
+        if (entries.isEmpty()) Text("Nothing yet. Play a song in any music app.")
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(entries) { e ->
+                Column {
+                    Text("${clock.format(Date(e.timeMs))} · ${e.kind.label}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(e.text, fontSize = 13.sp)
+                }
+            }
         }
     }
 }

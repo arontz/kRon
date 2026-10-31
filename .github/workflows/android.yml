@@ -21,6 +21,15 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Check the tag matches versionName
+        run: |
+          expected="${GITHUB_REF_NAME#android-v}"
+          actual=$(grep -oP 'val appVersionName = "\K[^"]+' android/app/build.gradle.kts)
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match appVersionName $actual in android/app/build.gradle.kts"
+            exit 1
+          fi
+
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

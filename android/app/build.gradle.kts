@@ -23,6 +23,11 @@ val releaseKeyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
 val releaseKeyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword") ?: releaseStorePassword
 val canSignRelease = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }
 
+// versionCode is derived from versionName (0.2.1 -> 201) so it always rises with the version, and the CI tag
+// check (android-vX.Y.Z must equal appVersionName) keeps the update checker honest.
+val appVersionName = "0.1.0"
+val appVersionCode = appVersionName.split(".").map(String::toInt).let { (major, minor, patch) -> major * 10000 + minor * 100 + patch }
+
 android {
     namespace = "app.kron.lyrics"
     compileSdk = 35
@@ -31,8 +36,8 @@ android {
         applicationId = "app.kron.lyrics"
         minSdk = 31
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {

@@ -15,7 +15,7 @@
 - All Android code lives in `android/`. Do not modify `src/`, `src-tauri/`, or `.github/workflows/release.yml`.
 - Application ID `app.kron.lyrics`, app name "kRon", Kotlin package `app.kron.lyrics`.
 - minSdk 31 (Android 12). No code paths for older versions.
-- Lyrics come only from LRCLIB (`https://lrclib.net`). Send User-Agent `kRon-Android/0.1 (https://github.com/arontz/kRon)`. No other network traffic.
+- Lyrics come only from LRCLIB (`https://lrclib.net`). Send User-Agent `kRon-Android/0.1 (https://github.com/arontz/kRon)`. The only other network traffic is `api.github.com` (release list), contacted only when the user taps "Check for updates"; there is no background update check. Everything the app reads or sends is shown on the in-app Activity log screen (in-memory, never written to disk).
 - Read only media metadata (title, artist, duration, state, position) from sessions. Never read or store other notification content.
 - No foreground service and no polling when nothing is playing.
 - Card: about 45% of screen width, current line ~12 sp, other lines ~10 sp, song/artist line very small, no buttons. Fades out 10 s after pause.
