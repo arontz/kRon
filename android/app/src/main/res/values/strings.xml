@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">kRon</string>
+    <string name="channel_running">Pill running</string>
+    <string name="channel_running_description">Shown while the kRon pill is on screen. Android needs it to keep kRon running.</string>
+    <string name="notification_title">kRon is on</string>
+    <string name="notification_text">The pill is floating over your apps.</string>
+    <string name="notification_hide">Hide pill</string>
+    <string name="listener_label">kRon now playing</string>
 </resources>

@@ -33,7 +33,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       # The release build runs too (unsigned without secrets), so a shrinker problem shows up here, not on tag day.
       - name: Build debug and release APKs
-        run: ./gradlew --no-daemon assembleDebug assembleRelease
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon assembleDebug assembleRelease 2>&1 | tee build.log
+      # Turns Kotlin and Gradle errors into annotations, so they show on the run's summary page.
+      - name: Show build errors
+        if: failure()
+        run: |
+          grep -E '^e: |^ERROR|What went wrong' -A3 build.log | head -40 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: kRon-android-debug
