@@ -1,16 +1,14 @@
 package app.kron.lyrics.media
 
-import android.app.ForegroundServiceStartNotAllowedException
 import android.content.ComponentName
-import android.content.Intent
+import android.content.res.Configuration
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
-import android.util.Log
 import app.kron.lyrics.model.PlaybackSnapshot
-import app.kron.lyrics.overlay.OverlayService
+import app.kron.lyrics.overlay.OverlayHost
 
 /**
  * Enabled by the user under "Notification access". It only reads media-session metadata
@@ -19,6 +17,7 @@ import app.kron.lyrics.overlay.OverlayService
 class MediaListenerService : NotificationListenerService() {
     private var manager: MediaSessionManager? = null
     private var controllers: List<MediaController> = emptyList()
+    private val host by lazy { OverlayHost(this) }
 
     private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { list ->
         track(list.orEmpty())
@@ -42,6 +41,7 @@ class MediaListenerService : NotificationListenerService() {
         manager?.removeOnActiveSessionsChangedListener(sessionsListener)
         release()
         NowPlayingStore.publish(NowPlayingStore.EMPTY)
+        host.shutdown()
     }
 
     private fun track(list: List<MediaController>) {
@@ -84,13 +84,19 @@ class MediaListenerService : NotificationListenerService() {
         startOverlayIfPlaying(snapshot)
     }
 
-    /** The overlay service exists only while something plays; it stops itself when the card fades out. */
+    /** The card runs only while something plays; the host shuts itself down once the card has faded out. */
     private fun startOverlayIfPlaying(s: PlaybackSnapshot) {
         if (s.track == null || !s.playing || !Settings.canDrawOverlays(this)) return
-        try {
-            startForegroundService(Intent(this, OverlayService::class.java))
-        } catch (e: ForegroundServiceStartNotAllowedException) {
-            Log.w("kron", "Android refused to start the overlay service from the background", e)
-        }
+        host.ensureRunning()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        host.onConfigurationChanged()
+    }
+
+    override fun onDestroy() {
+        host.shutdown()
+        super.onDestroy()
     }
 }

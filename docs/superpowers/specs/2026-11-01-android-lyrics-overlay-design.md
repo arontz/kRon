@@ -44,7 +44,8 @@ A later phase adds song recognition: a **Listen** button inside the kRon app its
 - Platform: Android 12+ (minSdk 31), current compile SDK.
 - Language and UI: Kotlin; Jetpack Compose for the setup screen and card contents.
 - Song source: `MediaSessionManager.getActiveSessions` through a `NotificationListenerService` the user enables.
-- Overlay: `WindowManager` with `TYPE_APPLICATION_OVERLAY`, not focusable, only the card area touchable, hosted by a foreground service that runs only while a session is playing.
+- Overlay: `WindowManager` with `TYPE_APPLICATION_OVERLAY`, not focusable, only the card area touchable, hosted by the notification listener service (which the system keeps bound), and running only while a session is playing. No foreground service: Android can refuse to start one from the background, and the listener does not need it.
+- Card background: a see-through dark tint with a light edge. No blur-behind flag: it blurs the whole screen, not just the card. A real blur under the card is a possible later improvement.
 - Lyrics source: LRCLIB (`lrclib.net`), the same one the Windows app uses. Match on title, artist and duration; fall back to its search endpoint if the exact match misses. Prefer synced lyrics; treat plain-only as "not synced".
 - Playback position: take the session's reported position and extrapolate with elapsed time and playback speed. Re-sync whenever the session reports a change.
 - Cache fetched lyrics on disk so a repeated song does not hit the network.

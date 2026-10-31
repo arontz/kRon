@@ -3,6 +3,7 @@ package app.kron.lyrics.lyrics
 import app.kron.lyrics.model.LrcLine
 import app.kron.lyrics.model.LyricsResult
 import app.kron.lyrics.model.Track
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +38,13 @@ class LyricsLoader(
         }
         _state.value = LyricsUiState.Loading
         job = scope.launch {
-            val result = fetcher.fetch(track)
+            val result = try {
+                fetcher.fetch(track)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                LyricsResult.Error // lyrics are a nicety; a failure must never take the app down
+            }
             if (current != track) return@launch
             _state.value = when (result) {
                 is LyricsResult.Synced -> LyricsUiState.Ready(result.lines)

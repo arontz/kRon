@@ -25,21 +25,17 @@ import app.kron.lyrics.model.LrcLine
 private val Accent = Color(0xFF7FE3C4)
 private val Shadowed = TextStyle(shadow = Shadow(Color(0x73000000), Offset(0f, 1f), 4f))
 
-/**
- * The floating lyrics card. With [blurAvailable] the background is a light see-through tint and the window
- * blurs what is behind it; without it the tint is darker so the text stays readable.
- */
+/** The floating lyrics card: a dark see-through tint with a light edge, readable over any app. */
 @Composable
 fun GlassCard(
     title: String,
     artist: String,
     state: LyricsUiState,
     lines: CardLines,
-    blurAvailable: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(16.dp)
-    val tint = if (blurAvailable) Color.White.copy(alpha = 0.16f) else Color(0xCC121420)
+    val tint = Color(0x99121420)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -93,10 +89,10 @@ private val previewState = LyricsUiState.Ready(listOf(LrcLine(0, "x")))
 
 @Preview(showBackground = true, backgroundColor = 0xFF31748F, widthDp = 170)
 @Composable
-private fun GlassCardBlurPreview() =
-    GlassCard("Song title", "Artist", previewState, previewLines, blurAvailable = true)
+private fun GlassCardDarkBackgroundPreview() =
+    GlassCard("Song title", "Artist", previewState, previewLines)
 
 @Preview(showBackground = true, backgroundColor = 0xFFF6C177, widthDp = 170)
 @Composable
-private fun GlassCardFallbackPreview() =
-    GlassCard("Song title", "Artist", previewState, previewLines, blurAvailable = false)
+private fun GlassCardLightBackgroundPreview() =
+    GlassCard("Song title", "Artist", previewState, previewLines)

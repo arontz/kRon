@@ -9,7 +9,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -90,7 +89,7 @@ class LrclibFetcher(private val baseUrl: String = "https://lrclib.net") : Lyrics
         } finally {
             c.disconnect()
         }
-    } catch (_: IOException) {
-        null
+    } catch (_: Exception) {
+        null // IOException, but also anything HttpURLConnection throws for odd responses
     }
 }

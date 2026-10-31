@@ -51,6 +51,14 @@ class LrcParserTest {
     }
 
     @Test
+    fun overlongTimestampIsSkippedNotCrashed() {
+        assertEquals(
+            listOf(LrcLine(1000, "ok")),
+            parseLrc("[99999999999999999999:00]bad\n[00:01.00]ok"),
+        )
+    }
+
+    @Test
     fun currentIndexCases() {
         val lines = listOf(LrcLine(1000, "a"), LrcLine(5000, "b"), LrcLine(9000, "c"))
         assertEquals(-1, currentIndex(lines, 999))

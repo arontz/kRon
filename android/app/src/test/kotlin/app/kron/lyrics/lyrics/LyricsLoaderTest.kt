@@ -69,6 +69,16 @@ class LyricsLoaderTest {
     }
 
     @Test
+    fun aFetcherThatThrowsGivesMissingInsteadOfCrashing() = runTest {
+        val loader = LyricsLoader(backgroundScope, object : LyricsFetcher {
+            override suspend fun fetch(track: Track): LyricsResult = throw IllegalStateException("disk full")
+        })
+        loader.load(a)
+        runCurrent()
+        assertEquals(LyricsUiState.Missing, loader.state.value)
+    }
+
+    @Test
     fun clearingTheTrackDropsAnInFlightResponse() = runTest {
         val fetcher = DeferredFetcher()
         val loader = LyricsLoader(backgroundScope, fetcher)

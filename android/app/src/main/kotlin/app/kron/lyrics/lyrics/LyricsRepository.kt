@@ -3,19 +3,23 @@ package app.kron.lyrics.lyrics
 import app.kron.lyrics.model.LrcLine
 import app.kron.lyrics.model.LyricsResult
 import app.kron.lyrics.model.Track
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-/** Serves synced lyrics from disk when it can; only synced results are kept. */
+/** Serves synced lyrics from disk when it can; only synced results are kept. A broken cache is ignored. */
 class LyricsRepository(
     private val fetcher: LyricsFetcher,
     private val cache: LyricsCache,
 ) : LyricsFetcher {
     override suspend fun fetch(track: Track): LyricsResult {
-        cache.get(track)?.let { text ->
+        withContext(Dispatchers.IO) { runCatching { cache.get(track) }.getOrNull() }?.let { text ->
             val lines = parseLrc(text)
             if (lines.isNotEmpty()) return LyricsResult.Synced(lines)
         }
         val result = fetcher.fetch(track)
-        if (result is LyricsResult.Synced) cache.put(track, formatLrc(result.lines))
+        if (result is LyricsResult.Synced) {
+            withContext(Dispatchers.IO) { runCatching { cache.put(track, formatLrc(result.lines)) } }
+        }
         return result
     }
 }

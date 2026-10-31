@@ -2,54 +2,46 @@ package app.kron.lyrics.overlay
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
 import android.view.WindowManager
-import androidx.compose.foundation.gestures.detectDragGestures
+import android.widget.FrameLayout
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import app.kron.lyrics.lyrics.LyricsUiState
-import java.util.function.Consumer
-import kotlin.math.roundToInt
 
 data class CardContent(val title: String, val artist: String, val state: LyricsUiState, val lines: CardLines)
 
 /**
- * One card-sized overlay window, so touches anywhere else reach the app underneath. The window blurs what is
- * behind it while the system allows that, and follows the setting if it changes.
+ * One card-sized overlay window, so touches anywhere else reach the app underneath. The card is a see-through
+ * tint; there is deliberately no blur-behind flag, which would blur the whole screen rather than the card.
  */
 class OverlayController(
     private val context: Context,
     private val positions: CardPositionStore,
 ) {
     private val wm = context.getSystemService(WindowManager::class.java)
-    private val owner = OverlayLifecycleOwner()
-    private var view: ComposeView? = null
+    private var owner: OverlayLifecycleOwner? = null
+    private var root: View? = null
+    private var fadingRoot: View? = null
     private var params: WindowManager.LayoutParams? = null
 
     private var content by mutableStateOf<CardContent?>(null)
-    private var blurEnabled by mutableStateOf(wm.isCrossWindowBlurEnabled)
-    private val blurListener = Consumer<Boolean> { enabled ->
-        blurEnabled = enabled
-        params?.let { applyBlur(it) }
-        view?.let { v -> params?.let { wm.updateViewLayout(v, it) } }
-    }
-
-    val isShowing: Boolean get() = view != null
 
     fun update(next: CardContent) {
         content = next
     }
 
     fun show() {
-        if (view != null) return
+        if (root != null) return
         val (screenW, screenH) = screenSize()
         val w = cardWidthPx(screenW)
         val lp = WindowManager.LayoutParams(
@@ -60,105 +52,77 @@ class OverlayController(
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            val start = positions.load() ?: Pos((screenW - w) / 2, screenH / 4)
+            val start = clampToScreen(positions.load() ?: Pos((screenW - w) / 2, screenH / 4), w, 0, screenW, screenH)
             x = start.x
             y = start.y
         }
-        applyBlur(lp)
-        params = lp
 
-        owner.start()
-        val v = ComposeView(context).apply {
-            setViewTreeLifecycleOwner(owner)
-            setViewTreeSavedStateRegistryOwner(owner)
-            setViewTreeViewModelStoreOwner(owner)
+        val lifecycle = OverlayLifecycleOwner().also { it.start() }
+        val card = ComposeView(context).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { content?.let { c -> GlassCard(c.title, c.artist, c.state, c.lines) } }
+        }
+        val frame = DragFrame().apply {
             alpha = 0f
-            setContent {
-                content?.let { c ->
-                    GlassCard(
-                        title = c.title,
-                        artist = c.artist,
-                        state = c.state,
-                        lines = c.lines,
-                        blurAvailable = blurEnabled,
-                        modifier = Modifier.pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragEnd = ::savePosition,
-                                onDragCancel = ::savePosition,
-                            ) { change, drag ->
-                                change.consume()
-                                move(drag.x.roundToInt(), drag.y.roundToInt())
-                            }
-                        },
-                    )
-                }
+            addView(card)
+            for (v in listOf<View>(this, card)) {
+                v.setViewTreeLifecycleOwner(lifecycle)
+                v.setViewTreeSavedStateRegistryOwner(lifecycle)
+                v.setViewTreeViewModelStoreOwner(lifecycle)
             }
         }
-        view = v
-        wm.addView(v, lp)
-        wm.addCrossWindowBlurEnabledListener(context.mainExecutor, blurListener)
-        v.animate().alpha(1f).setDuration(200).start()
+
+        try {
+            wm.addView(frame, lp)
+        } catch (e: RuntimeException) {
+            // e.g. the overlay permission was revoked between the check and now
+            Log.w("kron", "Could not add the lyrics card", e)
+            lifecycle.stop()
+            return
+        }
+        owner = lifecycle
+        root = frame
+        params = lp
+        frame.animate().alpha(1f).setDuration(200).start()
     }
 
     /** Fades the card out and removes it; [onGone] runs once it is off screen. */
     fun hide(onGone: () -> Unit = {}) {
-        val v = view ?: return onGone()
-        view = null
-        wm.removeCrossWindowBlurEnabledListener(blurListener)
+        val v = root ?: return onGone()
+        val lifecycle = owner
+        root = null
+        owner = null
+        fadingRoot = v
         v.animate().alpha(0f).setDuration(300).withEndAction {
+            fadingRoot = null
             runCatching { wm.removeView(v) }
-            owner.stop()
+            lifecycle?.stop()
             onGone()
         }.start()
     }
 
-    /** Removes the card at once, for when the service is going away. */
+    /** Removes the card at once, including one that is mid-fade, for when the host is going away. */
     fun release() {
-        val v = view
-        view = null
-        runCatching { wm.removeCrossWindowBlurEnabledListener(blurListener) }
-        if (v != null) {
+        for (v in listOfNotNull(root, fadingRoot)) {
             v.animate().cancel()
             runCatching { wm.removeView(v) }
-            owner.stop()
         }
+        root = null
+        fadingRoot = null
+        owner?.stop()
+        owner = null
     }
 
     /** Re-fits the card to the screen, e.g. after a rotation. */
     fun onConfigurationChanged() {
-        val v = view ?: return
+        val v = root ?: return
         val lp = params ?: return
         val (screenW, screenH) = screenSize()
         lp.width = cardWidthPx(screenW)
         val p = clampToScreen(Pos(lp.x, lp.y), lp.width, v.height, screenW, screenH)
         lp.x = p.x
         lp.y = p.y
-        wm.updateViewLayout(v, lp)
-    }
-
-    private fun move(dx: Int, dy: Int) {
-        val v = view ?: return
-        val lp = params ?: return
-        val (screenW, screenH) = screenSize()
-        val p = clampToScreen(Pos(lp.x + dx, lp.y + dy), lp.width, v.height, screenW, screenH)
-        lp.x = p.x
-        lp.y = p.y
-        wm.updateViewLayout(v, lp)
-    }
-
-    private fun savePosition() {
-        params?.let { positions.save(Pos(it.x, it.y)) }
-    }
-
-    private fun applyBlur(lp: WindowManager.LayoutParams) {
-        if (blurEnabled) {
-            lp.flags = lp.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-            lp.blurBehindRadius = BLUR_RADIUS_PX
-        } else {
-            lp.flags = lp.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
-            lp.blurBehindRadius = 0
-        }
+        runCatching { wm.updateViewLayout(v, lp) }
     }
 
     private fun screenSize(): Pair<Int, Int> {
@@ -166,7 +130,32 @@ class OverlayController(
         return b.width() to b.height()
     }
 
-    private companion object {
-        const val BLUR_RADIUS_PX = 24
+    /** Holds the card and turns a press-and-drag on it into window moves, measured in screen coordinates. */
+    private inner class DragFrame : FrameLayout(context) {
+        private var start = Pos(0, 0)
+        private var downX = 0f
+        private var downY = 0f
+
+        override fun onInterceptTouchEvent(ev: MotionEvent): Boolean = true
+
+        override fun onTouchEvent(event: MotionEvent): Boolean {
+            val lp = params ?: return false
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    start = Pos(lp.x, lp.y)
+                    downX = event.rawX
+                    downY = event.rawY
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val (screenW, screenH) = screenSize()
+                    val p = clampToScreen(dragPosition(start, downX, downY, event.rawX, event.rawY), lp.width, height, screenW, screenH)
+                    lp.x = p.x
+                    lp.y = p.y
+                    runCatching { wm.updateViewLayout(this, lp) }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> positions.save(Pos(lp.x, lp.y))
+            }
+            return true
+        }
     }
 }

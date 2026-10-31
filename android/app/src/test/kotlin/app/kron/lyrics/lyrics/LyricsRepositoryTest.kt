@@ -35,6 +35,15 @@ class LyricsRepositoryTest {
     }
 
     @Test
+    fun aBrokenCacheNeverBlocksTheLyrics() = runTest {
+        val lines = listOf(LrcLine(1_000, "one"))
+        val notADirectory = folder.newFile("blocker") // mkdirs() on this path fails, so put() throws
+        val repo = LyricsRepository(CountingFetcher(LyricsResult.Synced(lines)), LyricsCache(notADirectory.resolve("sub")))
+
+        assertEquals(LyricsResult.Synced(lines), repo.fetch(track))
+    }
+
+    @Test
     fun missesAreNotCached() = runTest {
         val fetcher = CountingFetcher(LyricsResult.NotFound)
         val repo = LyricsRepository(fetcher, LyricsCache(folder.newFolder("c")))

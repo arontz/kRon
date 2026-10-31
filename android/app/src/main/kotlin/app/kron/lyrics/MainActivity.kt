@@ -1,15 +1,11 @@
 package app.kron.lyrics
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,22 +32,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     private var listenerGranted by mutableStateOf(false)
     private var overlayGranted by mutableStateOf(false)
 
-    private val askNotifications =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -61,6 +48,9 @@ class MainActivity : ComponentActivity() {
                         onOpenListener = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         onOpenOverlay = {
                             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                        },
+                        onOpenAppInfo = {
+                            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
                         },
                     )
                 }
@@ -81,6 +71,7 @@ fun SetupScreen(
     overlayGranted: Boolean,
     onOpenListener: () -> Unit,
     onOpenOverlay: () -> Unit,
+    onOpenAppInfo: () -> Unit,
 ) {
     Column(
         modifier = Modifier.safeDrawingPadding().padding(24.dp),
@@ -95,6 +86,16 @@ fun SetupScreen(
             granted = listenerGranted,
             onOpen = onOpenListener,
         )
+        if (!listenerGranted) {
+            // An APK installed from a browser or file manager is "sideloaded": Android 13+ greys out the switch
+            // until the user allows restricted settings in App info.
+            Text(
+                "If the Notification access switch is greyed out: open App info, tap the three dots at the top " +
+                    "right, choose \"Allow restricted settings\", then come back and try again.",
+                fontSize = 13.sp,
+            )
+            Button(onClick = onOpenAppInfo) { Text("Open App info") }
+        }
         PermissionRow(
             title = "Display over other apps",
             explanation = "Lets kRon show the lyrics card on top of the app you are using.",

@@ -2,7 +2,8 @@ package app.kron.lyrics.lyrics
 
 import app.kron.lyrics.model.LrcLine
 
-private val STAMP = Regex("""\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?]""")
+// Minutes are bounded so an absurd stamp from the network is treated as plain text instead of overflowing.
+private val STAMP = Regex("""\[(\d{1,4}):(\d{1,2})(?:[.:](\d{1,3}))?]""")
 
 /** Parses LRC text into lines sorted by time. A line with several timestamps becomes several lines. */
 fun parseLrc(text: String): List<LrcLine> {
