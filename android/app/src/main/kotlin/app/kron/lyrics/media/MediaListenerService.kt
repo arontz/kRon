@@ -1,10 +1,16 @@
 package app.kron.lyrics.media
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.ComponentName
+import android.content.Intent
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
+import android.provider.Settings
 import android.service.notification.NotificationListenerService
+import android.util.Log
+import app.kron.lyrics.model.PlaybackSnapshot
+import app.kron.lyrics.overlay.OverlayService
 
 /**
  * Enabled by the user under "Notification access". It only reads media-session metadata
@@ -65,16 +71,26 @@ class MediaListenerService : NotificationListenerService() {
         val meta = controller.metadata
         val artist = meta?.getString(MediaMetadata.METADATA_KEY_ARTIST)
             ?: meta?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-        NowPlayingStore.publish(
-            toSnapshot(
-                title = meta?.getString(MediaMetadata.METADATA_KEY_TITLE),
-                artist = artist,
-                durationMs = meta?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: -1,
-                state = state.state,
-                positionMs = state.position,
-                speed = state.playbackSpeed,
-                updateTimeMs = state.lastPositionUpdateTime,
-            ),
+        val snapshot = toSnapshot(
+            title = meta?.getString(MediaMetadata.METADATA_KEY_TITLE),
+            artist = artist,
+            durationMs = meta?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: -1,
+            state = state.state,
+            positionMs = state.position,
+            speed = state.playbackSpeed,
+            updateTimeMs = state.lastPositionUpdateTime,
         )
+        NowPlayingStore.publish(snapshot)
+        startOverlayIfPlaying(snapshot)
+    }
+
+    /** The overlay service exists only while something plays; it stops itself when the card fades out. */
+    private fun startOverlayIfPlaying(s: PlaybackSnapshot) {
+        if (s.track == null || !s.playing || !Settings.canDrawOverlays(this)) return
+        try {
+            startForegroundService(Intent(this, OverlayService::class.java))
+        } catch (e: ForegroundServiceStartNotAllowedException) {
+            Log.w("kron", "Android refused to start the overlay service from the background", e)
+        }
     }
 }

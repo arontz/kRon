@@ -13,3 +13,12 @@ fun visibleLines(lines: List<LrcLine>, index: Int): CardLines = CardLines(
 )
 
 fun cardWidthPx(screenWidthPx: Int): Int = (screenWidthPx * 0.45).roundToInt()
+
+/** Top-left corner of the card window, in screen pixels. */
+data class Pos(val x: Int, val y: Int)
+
+/** Keeps the whole card on screen; a card larger than the screen pins to 0. */
+fun clampToScreen(p: Pos, cardW: Int, cardH: Int, screenW: Int, screenH: Int): Pos = Pos(
+    x = p.x.coerceIn(0, (screenW - cardW).coerceAtLeast(0)),
+    y = p.y.coerceIn(0, (screenH - cardH).coerceAtLeast(0)),
+)
