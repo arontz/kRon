@@ -2,6 +2,14 @@
 
 Each release's notes on GitHub come from the matching section below. Add a new `## vX.Y.Z` section on top before tagging a release.
 
+## v0.4.3
+
+- **QQ Music is now the main source for lyrics.** When a song starts, kRon asks QQ Music first and only asks LRCLIB if QQ Music has no timestamped lyrics. LRCLIB being down no longer leaves a song without lyrics.
+- **The right version of the song.** A result is used only if the title, the artist and the length (within 15 seconds) match, so a live or extended take is not synced to the studio recording.
+- **The lyrics panel says where they came from:** your own file, QQ Music or LRCLIB.
+- **Privacy:** the song's title and artist are now also sent to QQ Music, which is run by Tencent. QQ Music is not an official public service, so if it stops working kRon falls back to LRCLIB. The README and the website say exactly when kRon goes online.
+- **Songs that had no lyrics are looked up again.** The saved copy of lyrics starts fresh, because the old one only ever asked LRCLIB.
+
 ## v0.4.2
 
 - **Fixed: "Search the web" and "Check for updates…" opened a File Explorer window.** Links now open in your default browser.
