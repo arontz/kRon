@@ -1,0 +1,15 @@
+package app.kron.lyrics.overlay
+
+import app.kron.lyrics.model.LrcLine
+import kotlin.math.roundToInt
+
+data class CardLines(val previous: String, val current: String, val next: String)
+
+/** The three lines the card shows around [index]; an index of -1 means the song has not reached its first line. */
+fun visibleLines(lines: List<LrcLine>, index: Int): CardLines = CardLines(
+    previous = lines.getOrNull(index - 1)?.text.orEmpty(),
+    current = lines.getOrNull(index)?.text.orEmpty(),
+    next = lines.getOrNull(index + 1)?.text.orEmpty(),
+)
+
+fun cardWidthPx(screenWidthPx: Int): Int = (screenWidthPx * 0.45).roundToInt()
