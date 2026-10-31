@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,11 +46,14 @@ import app.kron.lyrics.log.LogEntry
 import app.kron.lyrics.log.LogKind
 import app.kron.lyrics.log.activityLog
 import app.kron.lyrics.media.ListenerConnection
+import app.kron.lyrics.media.ListenerStatus
+import app.kron.lyrics.media.listenerStatus
 import app.kron.lyrics.media.requestListenerRebind
 import app.kron.lyrics.media.shouldRequestRebind
 import app.kron.lyrics.update.UpdateChecker
 import app.kron.lyrics.update.UpdateResult
 import app.kron.lyrics.update.updateMessage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -68,12 +72,25 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val scope = rememberCoroutineScope()
+                    // The help appears only if Android still has not connected kRon after a few seconds, so a normal
+                    // start (the service connects within a moment) never flashes it.
+                    val connected by ListenerConnection.state.collectAsState()
+                    val status = listenerStatus(listenerGranted, connected)
+                    var reconnectHelp by remember { mutableStateOf(false) }
+                    LaunchedEffect(status) {
+                        reconnectHelp = false
+                        if (status == ListenerStatus.NotConnected) {
+                            delay(3_000)
+                            reconnectHelp = true
+                        }
+                    }
                     if (showLog) {
                         BackHandler { showLog = false }
                         val entries by activityLog.entries.collectAsState()
                         LogScreen(entries = entries, onClear = activityLog::clear, onBack = { showLog = false })
                     } else SetupScreen(
                         listenerGranted = listenerGranted,
+                        showReconnectHelp = reconnectHelp,
                         overlayGranted = overlayGranted,
                         onOpenListener = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         onOpenOverlay = {
@@ -116,6 +133,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SetupScreen(
     listenerGranted: Boolean,
+    showReconnectHelp: Boolean,
     overlayGranted: Boolean,
     onOpenListener: () -> Unit,
     onOpenOverlay: () -> Unit,
@@ -150,6 +168,16 @@ fun SetupScreen(
             )
             Button(onClick = onOpenAppInfo) { Text("Open App info") }
         }
+        if (showReconnectHelp) {
+            // On some phones Android does not reconnect an enabled listener after the app is updated, and only
+            // switching the permission off and on makes it bind again.
+            Text(
+                "Notification access is on, but Android has not connected kRon to it yet, so no lyrics will show. " +
+                    "This can happen after an update. Open the setting, switch kRon off, then on again.",
+                fontSize = 13.sp,
+            )
+            Button(onClick = onOpenListener) { Text("Open notification access") }
+        }
         PermissionRow(
             title = "Display over other apps",
             explanation = "Lets kRon show the lyrics card on top of the app you are using.",
@@ -164,9 +192,10 @@ fun SetupScreen(
         Text("What kRon reads and sends", fontWeight = FontWeight.SemiBold)
         Text(
             "It reads the title, artist, length and play/pause state of the active media session, and nothing from " +
-                "your notifications. It sends the title, artist and length to lrclib.net to get lyrics, and contacts " +
-                "api.github.com only when you tap \"Check for updates\". It stores only lyrics cached on this device " +
-                "and where you dragged the card.",
+                "your notifications. To get lyrics it sends the title and artist to QQ Music (c.y.qq.com), and, only " +
+                "if QQ Music has none, the title, artist and length to lrclib.net. It contacts api.github.com only " +
+                "when you tap \"Check for updates\". It stores only lyrics cached on this device and where you " +
+                "dragged the card.",
             fontSize = 13.sp,
         )
         OutlinedButton(onClick = onOpenLog) { Text("Activity log") }
