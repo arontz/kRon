@@ -10,8 +10,14 @@ import android.service.notification.NotificationListenerService
 import app.kron.lyrics.log.LogKind
 import app.kron.lyrics.log.activityLog
 import app.kron.lyrics.log.describeRead
-import app.kron.lyrics.model.PlaybackSnapshot
+import app.kron.lyrics.overlay.AppVisibility
 import app.kron.lyrics.overlay.OverlayHost
+import app.kron.lyrics.overlay.hostShouldRun
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Enabled by the user under "Notification access". It only reads media-session metadata
@@ -21,6 +27,7 @@ class MediaListenerService : NotificationListenerService() {
     private var manager: MediaSessionManager? = null
     private var controllers: List<MediaController> = emptyList()
     private val host by lazy { OverlayHost(this) }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { list ->
         track(list.orEmpty())
@@ -95,13 +102,24 @@ class MediaListenerService : NotificationListenerService() {
             describeRead(controller.packageName, snapshot),
         )
         NowPlayingStore.publish(snapshot)
-        startOverlayIfPlaying(snapshot)
+        startHostIfNeeded()
     }
 
-    /** The card runs only while something plays; the host shuts itself down once the card has faded out. */
-    private fun startOverlayIfPlaying(s: PlaybackSnapshot) {
-        if (s.track == null || !s.playing || !Settings.canDrawOverlays(this)) return
-        host.ensureRunning()
+    /**
+     * The host runs the floating card while music plays, or the lyrics inside kRon while it is open (even paused,
+     * and without the overlay permission). It shuts itself down once nobody could see it.
+     */
+    private fun startHostIfNeeded() {
+        val s = NowPlayingStore.snapshot.value
+        if (hostShouldRun(s.track != null, s.playing, Settings.canDrawOverlays(this), AppVisibility.isVisible)) {
+            host.ensureRunning()
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Opening kRon is what starts the in-app lyrics when the host is not already running.
+        scope.launch { AppVisibility.visible.collect { startHostIfNeeded() } }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -110,6 +128,7 @@ class MediaListenerService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        scope.cancel()
         host.shutdown()
         super.onDestroy()
     }
