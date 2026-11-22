@@ -5,15 +5,22 @@ import android.content.res.Configuration
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import app.kron.lyrics.log.LogKind
 import app.kron.lyrics.log.activityLog
+import app.kron.lyrics.history.PlayHistory
+import app.kron.lyrics.history.PlayTracker
+import app.kron.lyrics.history.PlayedSong
 import app.kron.lyrics.log.describeRead
+import app.kron.lyrics.model.PlaybackSnapshot
 import app.kron.lyrics.overlay.AppVisibility
 import app.kron.lyrics.overlay.OverlayHost
 import app.kron.lyrics.overlay.hostShouldRun
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -28,6 +35,8 @@ class MediaListenerService : NotificationListenerService() {
     private var controllers: List<MediaController> = emptyList()
     private val host by lazy { OverlayHost(this) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val playTracker = PlayTracker()
+    private var playJob: Job? = null
 
     private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { list ->
         track(list.orEmpty())
@@ -55,6 +64,7 @@ class MediaListenerService : NotificationListenerService() {
         manager?.removeOnActiveSessionsChangedListener(sessionsListener)
         release()
         NowPlayingStore.publish(NowPlayingStore.EMPTY)
+        trackPlays(NowPlayingStore.EMPTY, "")
         host.shutdown()
     }
 
@@ -81,6 +91,7 @@ class MediaListenerService : NotificationListenerService() {
         if (controller == null || state == null) {
             activityLog.addIfChanged("none", LogKind.MEDIA, "No active media session")
             NowPlayingStore.publish(NowPlayingStore.EMPTY)
+            trackPlays(NowPlayingStore.EMPTY, "")
             return
         }
         val meta = controller.metadata
@@ -102,7 +113,27 @@ class MediaListenerService : NotificationListenerService() {
             describeRead(controller.packageName, snapshot),
         )
         NowPlayingStore.publish(snapshot)
+        trackPlays(snapshot, controller.packageName)
         startHostIfNeeded()
+    }
+
+    /** Adds a song to the history once it has played for a while; skipping through songs adds nothing. */
+    private fun trackPlays(s: PlaybackSnapshot, player: String) {
+        playTracker.onSnapshot(s.track, s.playing, SystemClock.elapsedRealtime())
+        playJob?.cancel()
+        if (playTracker.remainingMs(SystemClock.elapsedRealtime()) == null) return
+        playJob = scope.launch {
+            while (true) {
+                val remaining = playTracker.remainingMs(SystemClock.elapsedRealtime()) ?: return@launch
+                if (remaining > 0) {
+                    delay(remaining + 50)
+                    continue
+                }
+                val track = playTracker.due(SystemClock.elapsedRealtime()) ?: return@launch
+                PlayHistory.record(PlayedSong(track.title, track.artist, track.durationMs, System.currentTimeMillis(), player))
+                return@launch
+            }
+        }
     }
 
     /**
@@ -118,6 +149,7 @@ class MediaListenerService : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
+        PlayHistory.init(this)
         // Opening kRon is what starts the in-app lyrics when the host is not already running.
         scope.launch { AppVisibility.visible.collect { startHostIfNeeded() } }
     }
