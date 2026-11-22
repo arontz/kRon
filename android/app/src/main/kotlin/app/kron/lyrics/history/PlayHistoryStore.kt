@@ -29,7 +29,10 @@ object PlayHistory {
         if (file != null) return
         val f = HistoryFile(File(context.applicationContext.filesDir, "history.json"))
         file = f
-        scope.launch { flow.update { mergeLoaded(it, f.read()) } }
+        scope.launch {
+            val loaded = f.read() // read first: update { } may run more than once under contention
+            flow.update { mergeLoaded(it, loaded) }
+        }
     }
 
     fun record(song: PlayedSong) {

@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PlayHistoryTest {
-    private fun song(title: String, artist: String = "A", at: Long = 0) = PlayedSong(title, artist, 200_000, at, "player")
+    private fun song(title: String, artist: String = "A", at: Long = 0) = PlayedSong(title, artist, 200_000, at)
 
     @Test
     fun newestSongGoesFirst() {
@@ -74,6 +74,19 @@ class PlayHistoryTest {
     fun oneBrokenEntryIsSkippedNotTheWholeList() {
         val list = decodeHistory("""[{"title":"good"},{"noTitle":true},"junk",{"title":"also good"}]""")
         assertEquals(listOf("good", "also good"), list.map { it.title })
+    }
+
+    @Test
+    fun aSongRepeatedInTheFileLoadsOnceSoTheListCanNeverHaveDuplicateKeys() {
+        val text = """[{"title":"Same","artist":"A","playedAtMs":9},{"title":" same ","artist":"a","playedAtMs":1},{"title":"Other"}]"""
+        val list = decodeHistory(text)
+        assertEquals(listOf("Same", "Other"), list.map { it.title })
+        assertEquals(9L, list.first().playedAtMs)
+    }
+
+    @Test
+    fun anOldFileThatStillHasAPlayerFieldLoads() {
+        assertEquals(listOf("x"), decodeHistory("""[{"title":"x","player":"com.old.app"}]""").map { it.title })
     }
 
     @Test

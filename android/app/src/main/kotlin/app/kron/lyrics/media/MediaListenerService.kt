@@ -64,7 +64,7 @@ class MediaListenerService : NotificationListenerService() {
         manager?.removeOnActiveSessionsChangedListener(sessionsListener)
         release()
         NowPlayingStore.publish(NowPlayingStore.EMPTY)
-        trackPlays(NowPlayingStore.EMPTY, "")
+        trackPlays(NowPlayingStore.EMPTY)
         host.shutdown()
     }
 
@@ -91,7 +91,7 @@ class MediaListenerService : NotificationListenerService() {
         if (controller == null || state == null) {
             activityLog.addIfChanged("none", LogKind.MEDIA, "No active media session")
             NowPlayingStore.publish(NowPlayingStore.EMPTY)
-            trackPlays(NowPlayingStore.EMPTY, "")
+            trackPlays(NowPlayingStore.EMPTY)
             return
         }
         val meta = controller.metadata
@@ -113,12 +113,12 @@ class MediaListenerService : NotificationListenerService() {
             describeRead(controller.packageName, snapshot),
         )
         NowPlayingStore.publish(snapshot)
-        trackPlays(snapshot, controller.packageName)
+        trackPlays(snapshot)
         startHostIfNeeded()
     }
 
     /** Adds a song to the history once it has played for a while; skipping through songs adds nothing. */
-    private fun trackPlays(s: PlaybackSnapshot, player: String) {
+    private fun trackPlays(s: PlaybackSnapshot) {
         playTracker.onSnapshot(s.track, s.playing, SystemClock.elapsedRealtime())
         playJob?.cancel()
         if (playTracker.remainingMs(SystemClock.elapsedRealtime()) == null) return
@@ -130,7 +130,7 @@ class MediaListenerService : NotificationListenerService() {
                     continue
                 }
                 val track = playTracker.due(SystemClock.elapsedRealtime()) ?: return@launch
-                PlayHistory.record(PlayedSong(track.title, track.artist, track.durationMs, System.currentTimeMillis(), player))
+                PlayHistory.record(PlayedSong(track.title, track.artist, track.durationMs, System.currentTimeMillis()))
                 return@launch
             }
         }

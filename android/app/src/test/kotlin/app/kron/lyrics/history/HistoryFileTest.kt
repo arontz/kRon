@@ -10,7 +10,7 @@ class HistoryFileTest {
     @get:Rule
     val folder = TemporaryFolder()
 
-    private val songs = listOf(PlayedSong("a", "x", 1, 2, "p"), PlayedSong("b", "y", 3, 4, "q"))
+    private val songs = listOf(PlayedSong("a", "x", 1, 2), PlayedSong("b", "y", 3, 4))
 
     @Test
     fun writtenSongsAreReadBack() {

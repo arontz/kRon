@@ -6,7 +6,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 
 /**
- * A song the user listened to. Every field after the title has a default, so a file written by an older or newer
+ * A song the user listened to: what the Lyrics tab shows, plus the length that finds its saved lyrics. Every field
+ * after the title has a default, so a file written by an older or newer
  * version of kRon still loads; a later version can add, say, where the entry came from without breaking old files.
  */
 @Serializable
@@ -15,8 +16,6 @@ data class PlayedSong(
     val artist: String = "",
     val durationMs: Long = 0,
     val playedAtMs: Long = 0,
-    /** Package name of the app that played it. */
-    val player: String = "",
 )
 
 const val HISTORY_CAP = 100
@@ -48,7 +47,8 @@ fun decodeHistory(text: String?): List<PlayedSong> {
         return emptyList()
     }
     val array = root as? JsonArray ?: return emptyList()
-    return array.mapNotNull { runCatching { json.decodeFromJsonElement(PlayedSong.serializer(), it) }.getOrNull() }
+    // One entry per song: the list screen uses the song as its key, and two the same would crash it.
+    return array.mapNotNull { runCatching { json.decodeFromJsonElement(PlayedSong.serializer(), it) }.getOrNull() }.distinctBy(::key)
 }
 
 /** "just now", "5 min ago", "3 h ago", "yesterday", "4 days ago". */

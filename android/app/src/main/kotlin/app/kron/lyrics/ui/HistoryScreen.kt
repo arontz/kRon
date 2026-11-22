@@ -50,6 +50,8 @@ fun HistoryScreen(
         SavedLyrics(opened, onCloseSong)
         return
     }
+    // The opened song left the list (cleared, or pushed past the cap): drop the selection so Back is not wasted.
+    if (openedSong != null) LaunchedEffect(openedSong) { onCloseSong() }
 
     var confirmClear by remember { mutableStateOf(false) }
     Column(
@@ -118,7 +120,7 @@ private fun SavedLyrics(song: PlayedSong, onBack: () -> Unit) {
         val saved = lines
         when {
             saved == null -> Text("Loading…", fontSize = 13.sp)
-            saved.isEmpty() -> Text("Lyrics aren't saved for this song yet. Play it with kRon open to get them.")
+            saved.isEmpty() -> Text("Lyrics aren't saved for this song yet. Play it again to save them.")
             else -> Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 saved.forEach { Text(it, fontSize = 16.sp) }
             }

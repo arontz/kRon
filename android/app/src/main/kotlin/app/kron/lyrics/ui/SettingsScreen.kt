@@ -47,8 +47,8 @@ fun SettingsScreen(state: MainState, actions: MainActions, onOpenLog: () -> Unit
                 "your notifications. To get lyrics it sends the title and artist to QQ Music (c.y.qq.com), and, only " +
                 "if QQ Music has none, the title, artist and length to lrclib.net. It contacts api.github.com only " +
                 "when you tap \"Check for updates\". On this phone only, it keeps the lyrics it has saved, a list of " +
-                "the songs you've played (title, artist and when), where you dragged the card, and whether to keep " +
-                "the screen on. None of it is backed up to the cloud.",
+                "the songs you've played (title, artist, length and when), where you dragged the card, and whether " +
+                "to keep the screen on. None of it is backed up to the cloud.",
             fontSize = 13.sp,
         )
         OutlinedButton(onClick = onOpenLog) { Text("Activity log") }
