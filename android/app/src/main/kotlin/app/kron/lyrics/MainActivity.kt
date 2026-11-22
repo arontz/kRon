@@ -160,7 +160,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        AppVisibility.isVisible = false
+        // Rotating the phone recreates this screen (onStop, then onStart); staying "visible" through that keeps the
+        // floating card from flashing on and off.
+        if (!isChangingConfigurations) AppVisibility.isVisible = false
         super.onStop()
     }
 
