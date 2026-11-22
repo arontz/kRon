@@ -19,12 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.kron.lyrics.ListenSlot
 import app.kron.lyrics.NowPlayingPanel
+import app.kron.lyrics.media.ListenerStatus
 
 /** Setup status (only what still needs fixing), the lyrics of what is playing, and the keep-screen-on switch. */
 @Composable
-fun HomeScreen(state: MainState, actions: MainActions) {
+fun HomeScreen(state: MainState, actions: MainActions, onOpenSettings: () -> Unit) {
     val issues = setupIssues(state.listenerStatus, state.reconnectHelp, state.overlayGranted)
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
@@ -44,7 +44,8 @@ fun HomeScreen(state: MainState, actions: MainActions) {
         }
         issues.forEach { issue -> IssueCard(issue, actions) }
 
-        NowPlayingPanel(state.liveLyrics, state.nowPlaying)
+        NowPlayingPanel(state.liveLyrics, state.nowPlaying, lyricsAvailable = state.listenerStatus == ListenerStatus.Connected)
+        ListenCard(state, actions, onOpenSettings)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -57,7 +58,6 @@ fun HomeScreen(state: MainState, actions: MainActions) {
             }
             Switch(checked = state.keepScreenOn, onCheckedChange = actions.onKeepScreenOnChange)
         }
-        ListenSlot()
     }
 }
 

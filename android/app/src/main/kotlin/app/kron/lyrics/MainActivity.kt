@@ -1,12 +1,17 @@
 package app.kron.lyrics
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,7 +39,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import app.kron.lyrics.history.PlayHistory
+import app.kron.lyrics.history.PlayedSong
 import app.kron.lyrics.log.LogEntry
 import app.kron.lyrics.log.LogKind
 import app.kron.lyrics.log.activityLog
@@ -42,11 +50,17 @@ import app.kron.lyrics.media.ListenerConnection
 import app.kron.lyrics.media.ListenerStatus
 import app.kron.lyrics.media.NowPlayingStore
 import app.kron.lyrics.media.RECONNECT_GRACE_MS
+import app.kron.lyrics.media.recognizedSnapshot
 import app.kron.lyrics.media.listenerStatus
 import app.kron.lyrics.media.requestListenerRebind
 import app.kron.lyrics.media.shouldRequestRebind
 import app.kron.lyrics.overlay.AppVisibility
 import app.kron.lyrics.overlay.LiveLyrics
+import app.kron.lyrics.recognition.AudioRecordMic
+import app.kron.lyrics.recognition.AuddClient
+import app.kron.lyrics.recognition.AuddTokenStore
+import app.kron.lyrics.recognition.ListenController
+import app.kron.lyrics.recognition.Recognition
 import app.kron.lyrics.ui.MainActions
 import app.kron.lyrics.ui.MainApp
 import app.kron.lyrics.ui.MainState
@@ -64,7 +78,40 @@ class MainActivity : ComponentActivity() {
     private var checking by mutableStateOf(false)
     private var updateResult by mutableStateOf<UpdateResult?>(null)
     private var keepScreenOn by mutableStateOf(false)
+    private var hasAuddToken by mutableStateOf(false)
     private val prefs by lazy { getSharedPreferences("settings", MODE_PRIVATE) }
+    private val tokenStore by lazy { AuddTokenStore(prefs) }
+
+    // The system permission dialog; its answer goes back to the Listen flow.
+    private val askMicrophone: ActivityResultLauncher<String> =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> listen.onPermissionResult(granted) }
+
+    private val listen: ListenController by lazy {
+        ListenController(
+            scope = lifecycleScope,
+            token = { tokenStore.token },
+            hasMicPermission = {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            },
+            requestMicPermission = { askMicrophone.launch(Manifest.permission.RECORD_AUDIO) },
+            recorder = AudioRecordMic(),
+            recognizer = AuddClient(),
+            elapsedNow = SystemClock::elapsedRealtime,
+            onMatch = ::onSongHeard,
+        )
+    }
+
+    /** A song the microphone recognized: show it like any playing song, and keep it in the Lyrics list. */
+    private fun onSongHeard(match: Recognition.Match, captureStartElapsedMs: Long) {
+        val minutes = match.positionMs / 60_000
+        val seconds = match.positionMs / 1_000 % 60
+        activityLog.add(
+            LogKind.MEDIA,
+            "AudD recognized \"${match.title}\" by ${match.artist.ifBlank { "unknown artist" }}, clip started at $minutes:%02d".format(seconds),
+        )
+        NowPlayingStore.publishRecognized(recognizedSnapshot(match, captureStartElapsedMs))
+        PlayHistory.record(PlayedSong(match.title, match.artist, durationMs = 0, playedAtMs = System.currentTimeMillis()))
+    }
 
     private fun applyKeepScreenOn() {
         if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -76,6 +123,7 @@ class MainActivity : ComponentActivity() {
         keepScreenOn = prefs.getBoolean(KEY_KEEP_SCREEN_ON, false)
         applyKeepScreenOn()
         PlayHistory.init(this)
+        hasAuddToken = tokenStore.token != null
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -87,6 +135,7 @@ class MainActivity : ComponentActivity() {
                     val nowPlaying by NowPlayingStore.snapshot.collectAsState()
                     val history by PlayHistory.songs.collectAsState()
                     val logEntries by activityLog.entries.collectAsState()
+                    val listenState by listen.state.collectAsState()
                     val status = listenerStatus(listenerGranted, connected)
                     var reconnectHelp by remember { mutableStateOf(false) }
                     LaunchedEffect(status) {
@@ -117,6 +166,8 @@ class MainActivity : ComponentActivity() {
                             versionName = BuildConfig.VERSION_NAME,
                             checking = checking,
                             updateResult = updateResult,
+                            listenState = listenState,
+                            hasAuddToken = hasAuddToken,
                         ),
                         actions = MainActions(
                             onOpenListener = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
@@ -143,6 +194,22 @@ class MainActivity : ComponentActivity() {
                             onOpenDownload = { url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
                             onClearHistory = PlayHistory::clear,
                             onClearLog = activityLog::clear,
+                            onListen = listen::listen,
+                            onCancelListen = listen::cancel,
+                            onStopShowing = {
+                                NowPlayingStore.clearRecognized()
+                                listen.reset()
+                            },
+                            onSaveToken = { t ->
+                                tokenStore.token = t
+                                hasAuddToken = tokenStore.token != null
+                                listen.reset()
+                            },
+                            onClearToken = {
+                                tokenStore.token = null
+                                hasAuddToken = false
+                                listen.reset()
+                            },
                         ),
                     )
                 }
@@ -157,6 +224,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        // Android silences the microphone for an app that is not in front, so a recording that kept going would
+        // come back as a quiet "no match". Leaving (or rotating) cancels it; tapping Listen starts it again.
+        listen.cancel()
         // Rotating the phone recreates this screen (onStop, then onStart); staying "visible" through that keeps the
         // floating card from flashing on and off.
         if (!isChangingConfigurations) AppVisibility.isVisible = false
@@ -198,7 +268,3 @@ fun LogScreen(entries: List<LogEntry>, onClear: () -> Unit, onBack: () -> Unit) 
         }
     }
 }
-
-/** Reserved for the Listen button of the song-recognition phase. */
-@Composable
-fun ListenSlot() = Unit

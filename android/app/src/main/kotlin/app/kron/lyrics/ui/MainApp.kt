@@ -26,6 +26,7 @@ import app.kron.lyrics.log.LogEntry
 import app.kron.lyrics.media.ListenerStatus
 import app.kron.lyrics.model.PlaybackSnapshot
 import app.kron.lyrics.overlay.CardContent
+import app.kron.lyrics.recognition.ListenState
 import app.kron.lyrics.update.UpdateResult
 
 enum class Tab(val label: String, val icon: ImageVector) {
@@ -47,6 +48,8 @@ class MainState(
     val versionName: String,
     val checking: Boolean,
     val updateResult: UpdateResult?,
+    val listenState: ListenState,
+    val hasAuddToken: Boolean,
 ) {
     val listenerGranted: Boolean get() = listenerStatus != ListenerStatus.NotGranted
 }
@@ -60,6 +63,11 @@ class MainActions(
     val onOpenDownload: (String) -> Unit,
     val onClearHistory: () -> Unit,
     val onClearLog: () -> Unit,
+    val onListen: () -> Unit,
+    val onCancelListen: () -> Unit,
+    val onStopShowing: () -> Unit,
+    val onSaveToken: (String) -> Unit,
+    val onClearToken: () -> Unit,
 )
 
 /**
@@ -100,7 +108,7 @@ fun MainApp(state: MainState, actions: MainActions) {
     ) { inner ->
         Box(modifier = Modifier.fillMaxSize().padding(inner)) {
             when (tab) {
-                Tab.Home -> HomeScreen(state, actions)
+                Tab.Home -> HomeScreen(state, actions, onOpenSettings = { tab = Tab.Settings })
                 Tab.Lyrics -> HistoryScreen(
                     history = state.history,
                     openedSong = openedSong,
