@@ -3,6 +3,7 @@ package app.kron.lyrics
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -25,6 +26,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -46,6 +48,11 @@ import app.kron.lyrics.log.LogEntry
 import app.kron.lyrics.log.LogKind
 import app.kron.lyrics.log.activityLog
 import app.kron.lyrics.media.ListenerConnection
+import app.kron.lyrics.media.NowPlayingStore
+import app.kron.lyrics.model.PlaybackSnapshot
+import app.kron.lyrics.overlay.AppVisibility
+import app.kron.lyrics.overlay.CardContent
+import app.kron.lyrics.overlay.LiveLyrics
 import app.kron.lyrics.media.ListenerStatus
 import app.kron.lyrics.media.RECONNECT_GRACE_MS
 import app.kron.lyrics.media.listenerStatus
@@ -66,9 +73,18 @@ class MainActivity : ComponentActivity() {
     private var showLog by mutableStateOf(false)
     private var checking by mutableStateOf(false)
     private var updateResult by mutableStateOf<UpdateResult?>(null)
+    private var keepScreenOn by mutableStateOf(false)
+    private val prefs by lazy { getSharedPreferences("settings", MODE_PRIVATE) }
+
+    private fun applyKeepScreenOn() {
+        if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        keepScreenOn = prefs.getBoolean(KEY_KEEP_SCREEN_ON, false)
+        applyKeepScreenOn()
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -76,6 +92,8 @@ class MainActivity : ComponentActivity() {
                     // The help appears only if Android still has not connected kRon after a few seconds, so a normal
                     // start (the service connects within a moment) never flashes it.
                     val connected by ListenerConnection.state.collectAsState()
+                    val liveLyrics by LiveLyrics.content.collectAsState()
+                    val nowPlaying by NowPlayingStore.snapshot.collectAsState()
                     val status = listenerStatus(listenerGranted, connected)
                     var reconnectHelp by remember { mutableStateOf(false) }
                     LaunchedEffect(status) {
@@ -99,6 +117,14 @@ class MainActivity : ComponentActivity() {
                     } else SetupScreen(
                         listenerGranted = listenerGranted,
                         showReconnectHelp = reconnectHelp,
+                        liveLyrics = liveLyrics,
+                        nowPlaying = nowPlaying,
+                        keepScreenOn = keepScreenOn,
+                        onKeepScreenOnChange = { on ->
+                            keepScreenOn = on
+                            prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, on).apply()
+                            applyKeepScreenOn()
+                        },
                         overlayGranted = overlayGranted,
                         onOpenListener = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         onOpenOverlay = {
@@ -127,10 +153,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Visible, not merely resumed: while kRon is on screen the lyrics show here and the floating card steps aside.
+    override fun onStart() {
+        super.onStart()
+        AppVisibility.isVisible = true
+    }
+
+    override fun onStop() {
+        // Rotating the phone recreates this screen (onStop, then onStart); staying "visible" through that keeps the
+        // floating card from flashing on and off.
+        if (!isChangingConfigurations) AppVisibility.isVisible = false
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         listenerGranted = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
         overlayGranted = Settings.canDrawOverlays(this)
+    }
+
+    private companion object {
+        const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
     }
 }
 
@@ -138,6 +181,10 @@ class MainActivity : ComponentActivity() {
 fun SetupScreen(
     listenerGranted: Boolean,
     showReconnectHelp: Boolean,
+    liveLyrics: CardContent?,
+    nowPlaying: PlaybackSnapshot,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
     overlayGranted: Boolean,
     onOpenListener: () -> Unit,
     onOpenOverlay: () -> Unit,
@@ -154,7 +201,19 @@ fun SetupScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("kRon", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-        Text("Lyrics for whatever is playing, floating over your other apps.")
+        Text("Lyrics for whatever is playing: floating over your other apps, and right here while kRon is open.")
+        NowPlayingPanel(liveLyrics, nowPlaying)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Keep the screen on", fontWeight = FontWeight.SemiBold)
+                Text("The screen won't turn off while kRon is open and in front. Other apps are not affected.", fontSize = 13.sp)
+            }
+            Switch(checked = keepScreenOn, onCheckedChange = onKeepScreenOnChange)
+        }
         ListenSlot()
         PermissionRow(
             title = "Notification access",
@@ -190,7 +249,7 @@ fun SetupScreen(
         )
         Spacer(Modifier.height(8.dp))
         if (listenerGranted && overlayGranted) {
-            Text("All set. Play a song in any music app and the lyrics card appears.")
+            Text("All set. Play a song in any music app: the lyrics card floats over your apps, and shows here while kRon is open.")
         }
         Spacer(Modifier.height(8.dp))
         Text("What kRon reads and sends", fontWeight = FontWeight.SemiBold)
@@ -198,8 +257,8 @@ fun SetupScreen(
             "It reads the title, artist, length and play/pause state of the active media session, and nothing from " +
                 "your notifications. To get lyrics it sends the title and artist to QQ Music (c.y.qq.com), and, only " +
                 "if QQ Music has none, the title, artist and length to lrclib.net. It contacts api.github.com only " +
-                "when you tap \"Check for updates\". It stores only lyrics cached on this device and where you " +
-                "dragged the card.",
+                "when you tap \"Check for updates\". It stores only lyrics cached on this device, where you " +
+                "dragged the card, and whether to keep the screen on.",
             fontSize = 13.sp,
         )
         OutlinedButton(onClick = onOpenLog) { Text("Activity log") }

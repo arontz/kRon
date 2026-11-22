@@ -50,6 +50,7 @@ class OverlayHost(private val context: Context) {
         controller = null
         scope = null
         fading = false
+        LiveLyrics.set(null)
     }
 
     fun onConfigurationChanged() {
@@ -87,11 +88,21 @@ class OverlayHost(private val context: Context) {
         val now = SystemClock.elapsedRealtime()
         val snap = latest
         val track = snap.track
-        if (track == null || !Settings.canDrawOverlays(context)) return shutdown()
-        if (!cardVisible(snap, now)) {
-            fading = true
-            return c.hide { shutdown() }
+        val decision = renderDecision(
+            hasTrack = track != null,
+            canDrawOverlays = Settings.canDrawOverlays(context),
+            appVisible = AppVisibility.isVisible,
+            playbackVisible = track != null && cardVisible(snap, now),
+        )
+        when (decision) {
+            Render.Stop -> return shutdown()
+            Render.FadeThenStop -> {
+                fading = true
+                return c.hide { shutdown() }
+            }
+            Render.RunCardHidden, Render.ShowCard -> Unit
         }
+        if (track == null) return // unreachable: a missing track decides Stop above
 
         val state = loader.state.value
         val lines = if (state is LyricsUiState.Ready) {
@@ -99,7 +110,13 @@ class OverlayHost(private val context: Context) {
         } else {
             CardLines("", "", "")
         }
-        c.update(CardContent(track.title, track.artist, state, lines))
-        c.show()
+        val content = CardContent(track.title, track.artist, state, lines)
+        LiveLyrics.set(content)
+        if (decision == Render.RunCardHidden) {
+            c.release() // kRon's own screen shows the lyrics now; releasing is instant and harmless when already gone
+        } else {
+            c.update(content)
+            c.show()
+        }
     }
 }
