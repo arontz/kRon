@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,10 +20,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kron.lyrics.recognition.RecognizerChoice
 import app.kron.lyrics.update.UpdateResult
 import app.kron.lyrics.update.updateMessage
 
@@ -54,8 +58,11 @@ fun SettingsScreen(state: MainState, actions: MainActions, onOpenLog: () -> Unit
             "It reads the title, artist, length and play/pause state of the active media session, and nothing from " +
                 "your notifications. To get lyrics it sends the title and artist to QQ Music (c.y.qq.com), and, only " +
                 "if QQ Music has none, the title, artist and length to lrclib.net. Only when you tap Listen, it " +
-                "records about 10 seconds from the microphone and sends that clip to AudD (audd.io) to find the " +
-                "song; kRon does not keep the recording, and how long AudD keeps it is up to AudD. It contacts " +
+                "records about 10 seconds from the microphone. With AudD, that clip is sent to AudD (audd.io) to " +
+                "find the song, and how long AudD keeps it is up to AudD. With the experimental Shazam option, the " +
+                "clip is turned into a fingerprint on your phone and only the fingerprint (no audio, and no account) " +
+                "is sent to Shazam, whose unofficial interface can change or block this at any time. Either way " +
+                "kRon does not keep the recording. It contacts " +
                 "api.github.com only when you tap \"Check for updates\". On this phone only, it keeps the lyrics it " +
                 "has saved, a list of the songs you've played (title, artist, length and when), your AudD token if " +
                 "you add one, where you dragged the card, and whether to keep the screen on. None of it is backed " +
@@ -85,10 +92,24 @@ fun SettingsScreen(state: MainState, actions: MainActions, onOpenLog: () -> Unit
 private fun AuddSection(state: MainState, actions: MainActions) {
     var draft by remember { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Song recognition (AudD)", fontWeight = FontWeight.SemiBold)
+        Text("Song recognition", fontWeight = FontWeight.SemiBold)
+        Text("Which service the Listen button on Home uses.", fontSize = 13.sp)
+        RecognizerOption(
+            selected = state.recognizerChoice == RecognizerChoice.Audd,
+            title = "AudD",
+            description = "Official and supported. Needs your own free token (the first 300 requests are free).",
+            onSelect = { actions.onChooseRecognizer(RecognizerChoice.Audd) },
+        )
+        RecognizerOption(
+            selected = state.recognizerChoice == RecognizerChoice.Shazam,
+            title = "Shazam (experimental)",
+            description = "Free, no account or token. It uses Shazam's unofficial interface, so it can stop working " +
+                "at any time. Only a fingerprint of the clip, not the audio, is sent to Shazam, which Apple owns.",
+            onSelect = { actions.onChooseRecognizer(RecognizerChoice.Shazam) },
+        )
+        Text("AudD token", fontWeight = FontWeight.SemiBold)
         Text(
-            "The Listen button on Home uses AudD. Make a free account, copy your token and paste it here. " +
-                "The first 300 requests are free.",
+            "Used only with AudD. Make a free account, copy your token and paste it here. It stays on this phone.",
             fontSize = 13.sp,
         )
         OutlinedButton(onClick = { actions.onOpenDownload("https://dashboard.audd.io") }) { Text("Get a free token") }
@@ -111,6 +132,21 @@ private fun AuddSection(state: MainState, actions: MainActions) {
             if (state.hasAuddToken) OutlinedButton(onClick = actions.onClearToken) { Text("Remove token") }
         }
         Text(if (state.hasAuddToken) "A token is saved on this phone." else "No token yet.", fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun RecognizerOption(selected: Boolean, title: String, description: String, onSelect: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Column {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(description, fontSize = 13.sp)
+        }
     }
 }
 

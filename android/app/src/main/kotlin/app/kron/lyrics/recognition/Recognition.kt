@@ -14,6 +14,9 @@ enum class RecognitionError {
     /** The free requests, or the paid ones, are used up. */
     LimitReached,
 
+    /** The service is refusing requests for now (HTTP 429); trying again later may work. */
+    RateLimited,
+
     /** The service could not be reached. */
     Network,
 

@@ -28,7 +28,7 @@ class ListenControllerTest {
         }
     }
 
-    private class FakeRecognizer(var result: Recognition) : SongRecognizer {
+    private class FakeRecognizer(var result: Recognition, override val needsToken: Boolean = true) : SongRecognizer {
         var calls = 0
         var lastToken: String? = null
         override suspend fun recognize(wav: ByteArray, token: String): Recognition {
@@ -41,7 +41,7 @@ class ListenControllerTest {
     private class Env(
         scope: TestScope,
         val recorder: FakeRecorder = FakeRecorder(),
-        val recognizer: FakeRecognizer = FakeRecognizer(Recognition.NoMatch),
+        var recognizer: FakeRecognizer = FakeRecognizer(Recognition.NoMatch),
         var token: String? = "tok",
         var micGranted: Boolean = true,
     ) {
@@ -53,7 +53,7 @@ class ListenControllerTest {
             hasMicPermission = { micGranted },
             requestMicPermission = { permissionRequests++ },
             recorder = recorder,
-            recognizer = recognizer,
+            recognizer = { recognizer },
             elapsedNow = { 5_000L },
             onMatch = { m, start -> matches += m to start },
         )
@@ -190,6 +190,36 @@ class ListenControllerTest {
         e.controller.listen() // and the button works again, it is not stuck as busy
         runCurrent()
         assertEquals(2, e.recorder.calls)
+    }
+
+    @Test
+    fun aServiceThatNeedsNoTokenListensWithoutOne() = runTest {
+        val e = Env(this, recognizer = FakeRecognizer(match, needsToken = false), token = null)
+        e.controller.listen()
+        runCurrent()
+        assertEquals(ListenState.Found(match), e.state)
+        assertEquals("", e.recognizer.lastToken)
+    }
+
+    @Test
+    fun theTokenIsOnlyRequiredForTheServiceThatIsChosen() = runTest {
+        val e = Env(this, token = null) // starts on a service that needs one
+        e.controller.listen()
+        runCurrent()
+        assertEquals(ListenState.NeedsToken, e.state)
+
+        e.recognizer = FakeRecognizer(match, needsToken = false) // the user switches service
+        e.controller.listen()
+        runCurrent()
+        assertEquals(ListenState.Found(match), e.state)
+    }
+
+    @Test
+    fun aTokenIsStillPassedOnWhenOneIsSaved() = runTest {
+        val e = Env(this, recognizer = FakeRecognizer(match, needsToken = false), token = " abc ")
+        e.controller.listen()
+        runCurrent()
+        assertEquals("abc", e.recognizer.lastToken)
     }
 
     @Test

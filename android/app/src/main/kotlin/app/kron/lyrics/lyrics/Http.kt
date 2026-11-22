@@ -32,6 +32,31 @@ internal fun httpPostMultipart(url: String, boundary: String, body: ByteArray, l
     null
 }
 
+/** A JSON POST that never throws; [label] is what the Activity log shows. */
+internal fun httpPostJson(url: String, json: String, label: String): Pair<Int, String>? = try {
+    val body = json.toByteArray(Charsets.UTF_8)
+    val c = URL(url).openConnection() as HttpURLConnection
+    c.requestMethod = "POST"
+    c.doOutput = true
+    c.connectTimeout = 10_000
+    c.readTimeout = 20_000
+    c.setRequestProperty("User-Agent", "kRon-Android/0.1 (https://github.com/arontz/kRon)")
+    c.setRequestProperty("Content-Type", "application/json")
+    c.setFixedLengthStreamingMode(body.size)
+    try {
+        c.outputStream.use { it.write(body) }
+        val code = c.responseCode
+        activityLog.add(LogKind.NETWORK, "$label → HTTP $code")
+        val stream = if (code in 200..299) c.inputStream else c.errorStream
+        code to (stream?.bufferedReader()?.use { it.readText() } ?: "")
+    } finally {
+        c.disconnect()
+    }
+} catch (_: Exception) {
+    activityLog.add(LogKind.NETWORK, "$label → no connection")
+    null
+}
+
 /**
  * A GET that never throws. Returns the status code and body, or null when the network failed.
  * Every request is written to the Activity log, since that screen shows what kRon sends.

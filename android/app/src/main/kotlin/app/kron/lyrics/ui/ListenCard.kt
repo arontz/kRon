@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kron.lyrics.media.ListenerStatus
 import app.kron.lyrics.recognition.ListenState
+import app.kron.lyrics.recognition.RecognizerChoice
 import app.kron.lyrics.recognition.RecognitionError
 
 /** The Listen button and what happens after it is tapped. */
@@ -35,14 +36,19 @@ fun ListenCard(state: MainState, actions: MainActions, onOpenSettings: () -> Uni
         when (val s = state.listenState) {
             ListenState.Idle -> {
                 Text(
-                    "Identify a song playing nearby, on a speaker, a TV or the radio. When you tap, about 10 seconds " +
-                        "of microphone audio is sent to AudD to find it.",
+                    "Identify a song playing nearby, on a speaker, a TV or the radio. " +
+                        if (state.recognizerChoice == RecognizerChoice.Shazam) {
+                            "When you tap, about 10 seconds of microphone audio is turned into a fingerprint on your phone, " +
+                                "and only the fingerprint is sent to Shazam."
+                        } else {
+                            "When you tap, about 10 seconds of microphone audio is sent to AudD to find it."
+                        },
                     fontSize = 13.sp,
                 )
                 Button(onClick = actions.onListen) { Text("Listen") }
             }
             ListenState.NeedsToken -> {
-                Text("Listening needs a free AudD token. Get one and paste it in Settings.", fontSize = 13.sp)
+                Text("Listening with AudD needs a free token. Get one and paste it in Settings, or switch to Shazam there.", fontSize = 13.sp)
                 Button(onClick = onOpenSettings) { Text("Open Settings") }
             }
             ListenState.NeedsPermission ->
@@ -101,6 +107,7 @@ fun ListenCard(state: MainState, actions: MainActions, onOpenSettings: () -> Uni
 private fun failureMessage(error: RecognitionError) = when (error) {
     RecognitionError.InvalidToken -> "AudD didn't accept your token. Check it in Settings."
     RecognitionError.LimitReached -> "Your free AudD requests are used up. Add credit on audd.io, or try again later."
-    RecognitionError.Network -> "Couldn't reach AudD. Check your connection and try again."
+    RecognitionError.RateLimited -> "Shazam is refusing requests right now. Wait a while and try again, or switch to AudD in Settings."
+    RecognitionError.Network -> "Couldn't reach the service. Check your connection and try again."
     RecognitionError.Other -> "Something went wrong with the lookup. Try again."
 }

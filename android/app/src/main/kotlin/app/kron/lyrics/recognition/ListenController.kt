@@ -13,6 +13,9 @@ interface MicRecorder {
 }
 
 interface SongRecognizer {
+    /** Whether this service needs the user's own token; the Listen button asks for one only then. */
+    val needsToken: Boolean
+
     suspend fun recognize(wav: ByteArray, token: String): Recognition
 }
 
@@ -44,7 +47,7 @@ class ListenController(
     private val hasMicPermission: () -> Boolean,
     private val requestMicPermission: () -> Unit,
     private val recorder: MicRecorder,
-    private val recognizer: SongRecognizer,
+    private val recognizer: () -> SongRecognizer,
     private val elapsedNow: () -> Long,
     private val onMatch: (match: Recognition.Match, captureStartElapsedMs: Long) -> Unit,
 ) {
@@ -57,7 +60,7 @@ class ListenController(
     fun listen() {
         val s = _state.value
         if (s is ListenState.Listening || s is ListenState.Identifying) return
-        if (token().isNullOrBlank()) {
+        if (recognizer().needsToken && token().isNullOrBlank()) {
             _state.value = ListenState.NeedsToken
             return
         }
@@ -89,8 +92,9 @@ class ListenController(
     }
 
     private fun start() {
+        val service = recognizer()
         val tok = token()?.trim().orEmpty()
-        if (tok.isEmpty()) {
+        if (service.needsToken && tok.isEmpty()) {
             _state.value = ListenState.NeedsToken
             return
         }
@@ -109,7 +113,7 @@ class ListenController(
                 return@launch
             }
             _state.value = ListenState.Identifying
-            when (val r = recognizer.recognize(wav, tok)) {
+            when (val r = service.recognize(wav, tok)) {
                 is Recognition.Match -> {
                     _state.value = ListenState.Found(r)
                     onMatch(r, captureStart)

@@ -27,6 +27,7 @@ import app.kron.lyrics.media.ListenerStatus
 import app.kron.lyrics.model.PlaybackSnapshot
 import app.kron.lyrics.overlay.CardContent
 import app.kron.lyrics.recognition.ListenState
+import app.kron.lyrics.recognition.RecognizerChoice
 import app.kron.lyrics.update.UpdateResult
 
 enum class Tab(val label: String, val icon: ImageVector) {
@@ -50,6 +51,7 @@ class MainState(
     val updateResult: UpdateResult?,
     val listenState: ListenState,
     val hasAuddToken: Boolean,
+    val recognizerChoice: RecognizerChoice,
     /** A heard song is on show, which can be dismissed even if the Listen card was reset. */
     val heardSongActive: Boolean,
 ) {
@@ -70,6 +72,7 @@ class MainActions(
     val onStopShowing: () -> Unit,
     val onSaveToken: (String) -> Unit,
     val onClearToken: () -> Unit,
+    val onChooseRecognizer: (RecognizerChoice) -> Unit,
 )
 
 /**
