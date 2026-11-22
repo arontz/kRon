@@ -20,7 +20,7 @@ import app.kron.lyrics.overlay.CardContent
  * working out; when there is none (nothing started it yet) the title and artist still come from [nowPlaying].
  */
 @Composable
-fun NowPlayingPanel(content: CardContent?, nowPlaying: PlaybackSnapshot) {
+fun NowPlayingPanel(content: CardContent?, nowPlaying: PlaybackSnapshot, lyricsAvailable: Boolean) {
     val track = nowPlaying.track
     val title = content?.title ?: track?.title
     if (title == null) {
@@ -47,7 +47,13 @@ fun NowPlayingPanel(content: CardContent?, nowPlaying: PlaybackSnapshot) {
             LyricsUiState.Missing -> Text("No lyrics found for this song.")
             LyricsUiState.Unavailable -> Text("The lyrics service is down. kRon keeps trying.")
             LyricsUiState.Loading -> Text("Finding lyrics…")
-            LyricsUiState.Idle, null -> Text(if (nowPlaying.playing) "Finding lyrics…" else "Paused. Press play to see the lyrics.")
+            LyricsUiState.Idle, null -> Text(
+                when {
+                    !lyricsAvailable -> "Turn on notification access to see lyrics here."
+                    nowPlaying.playing -> "Finding lyrics…"
+                    else -> "Paused. Press play to see the lyrics."
+                },
+            )
         }
     }
 }

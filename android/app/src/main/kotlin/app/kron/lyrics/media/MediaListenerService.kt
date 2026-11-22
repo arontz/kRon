@@ -150,7 +150,8 @@ class MediaListenerService : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         PlayHistory.init(this)
-        // Opening kRon is what starts the in-app lyrics when the host is not already running.
+        // A heard song arriving, or the app opening, is what starts the host when it is not already running.
+        scope.launch { NowPlayingStore.snapshot.collect { startHostIfNeeded() } }
         scope.launch { AppVisibility.visible.collect { startHostIfNeeded() } }
     }
 
