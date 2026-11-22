@@ -61,6 +61,9 @@ import app.kron.lyrics.recognition.AuddClient
 import app.kron.lyrics.recognition.AuddTokenStore
 import app.kron.lyrics.recognition.ListenController
 import app.kron.lyrics.recognition.Recognition
+import app.kron.lyrics.recognition.RecognizerChoice
+import app.kron.lyrics.recognition.RecognizerChoiceStore
+import app.kron.lyrics.recognition.shazam.ShazamClient
 import app.kron.lyrics.recognition.heardLogMessage
 import app.kron.lyrics.ui.MainActions
 import app.kron.lyrics.ui.MainApp
@@ -82,6 +85,10 @@ class MainActivity : ComponentActivity() {
     private var hasAuddToken by mutableStateOf(false)
     private val prefs by lazy { getSharedPreferences("settings", MODE_PRIVATE) }
     private val tokenStore by lazy { AuddTokenStore(prefs) }
+    private val choiceStore by lazy { RecognizerChoiceStore(prefs) }
+    private var recognizerChoice by mutableStateOf(RecognizerChoice.Audd)
+    private val audd = AuddClient()
+    private val shazam = ShazamClient()
 
     // The system permission dialog; its answer goes back to the Listen flow.
     private val askMicrophone: ActivityResultLauncher<String> =
@@ -96,7 +103,7 @@ class MainActivity : ComponentActivity() {
             },
             requestMicPermission = { askMicrophone.launch(Manifest.permission.RECORD_AUDIO) },
             recorder = AudioRecordMic(),
-            recognizer = AuddClient(),
+            recognizer = { if (recognizerChoice == RecognizerChoice.Shazam) shazam else audd },
             elapsedNow = SystemClock::elapsedRealtime,
             onMatch = ::onSongHeard,
         )
@@ -104,7 +111,7 @@ class MainActivity : ComponentActivity() {
 
     /** A song the microphone recognized: show it like any playing song, and keep it in the Lyrics list. */
     private fun onSongHeard(match: Recognition.Match, captureStartElapsedMs: Long) {
-        activityLog.add(LogKind.MEDIA, heardLogMessage(match))
+        activityLog.add(LogKind.MEDIA, heardLogMessage(match, if (recognizerChoice == RecognizerChoice.Shazam) "Shazam" else "AudD"))
         NowPlayingStore.publishRecognized(recognizedSnapshot(match, captureStartElapsedMs))
         PlayHistory.record(PlayedSong(match.title, match.artist, durationMs = 0, playedAtMs = System.currentTimeMillis()))
     }
@@ -120,6 +127,7 @@ class MainActivity : ComponentActivity() {
         applyKeepScreenOn()
         PlayHistory.init(this)
         hasAuddToken = tokenStore.token != null
+        recognizerChoice = choiceStore.choice
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -165,6 +173,7 @@ class MainActivity : ComponentActivity() {
                             updateResult = updateResult,
                             listenState = listenState,
                             hasAuddToken = hasAuddToken,
+                            recognizerChoice = recognizerChoice,
                             heardSongActive = heardSongActive,
                         ),
                         actions = MainActions(
@@ -206,6 +215,11 @@ class MainActivity : ComponentActivity() {
                             onClearToken = {
                                 tokenStore.token = null
                                 hasAuddToken = false
+                                listen.reset()
+                            },
+                            onChooseRecognizer = { choice ->
+                                recognizerChoice = choice
+                                choiceStore.choice = choice
                                 listen.reset()
                             },
                         ),

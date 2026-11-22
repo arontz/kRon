@@ -7,6 +7,8 @@ import java.util.UUID
 
 /** Sends a recorded clip to AudD's standard endpoint (a multipart POST with the token and the audio file). */
 class AuddClient(private val url: String = "https://api.audd.io/") : SongRecognizer {
+    override val needsToken = true
+
     override suspend fun recognize(wav: ByteArray, token: String): Recognition = withContext(Dispatchers.IO) {
         val boundary = "kron" + UUID.randomUUID().toString().replace("-", "")
         val body = multipartBody(boundary, mapOf("api_token" to token), "file", "listen.wav", "audio/wav", wav)

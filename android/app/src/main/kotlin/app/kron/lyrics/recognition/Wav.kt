@@ -35,3 +35,28 @@ fun rmsLevel(buffer: ByteArray, length: Int): Float {
     }
     return (sqrt(sum / samples) / 32_768.0).toFloat().coerceIn(0f, 1f)
 }
+
+class WavAudio(val sampleRate: Int, val samples: ShortArray)
+
+/** Reads mono 16-bit PCM out of a WAV, or null when it is not one. An odd trailing byte is ignored. */
+fun readWav(bytes: ByteArray): WavAudio? {
+    if (bytes.size < 12 || String(bytes, 0, 4, Charsets.US_ASCII) != "RIFF" || String(bytes, 8, 4, Charsets.US_ASCII) != "WAVE") return null
+    val data = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+    var sampleRate = 0
+    var position = 12
+    while (position + 8 <= bytes.size) {
+        val id = String(bytes, position, 4, Charsets.US_ASCII)
+        val size = data.getInt(position + 4)
+        val body = position + 8
+        if (size < 0) return null
+        if (id == "fmt " && body + 8 <= bytes.size) sampleRate = data.getInt(body + 4)
+        if (id == "data") {
+            if (sampleRate <= 0) return null
+            val end = minOf(bytes.size, body + size)
+            val samples = ShortArray((end - body) / 2) { data.getShort(body + it * 2) }
+            return WavAudio(sampleRate, samples)
+        }
+        position = body + size + (size and 1)
+    }
+    return null
+}
