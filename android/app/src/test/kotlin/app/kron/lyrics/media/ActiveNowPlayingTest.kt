@@ -55,6 +55,14 @@ class ActiveNowPlayingTest {
     }
 
     @Test
+    fun aHeardSongIsShownOnlyWhileNothingPlaysOnThePhoneAndItHasNotExpired() {
+        assertEquals(true, heardSongShown(none, heard, nowMs = 50))
+        assertEquals(false, heardSongShown(session, heard, nowMs = 50))
+        assertEquals(false, heardSongShown(none, heard, nowMs = 100))
+        assertEquals(false, heardSongShown(none, null, nowMs = 0))
+    }
+
+    @Test
     fun theHeardSongStaysForSevenMinutes() {
         assertEquals(7 * 60_000L, RECOGNIZED_TTL_MS)
     }

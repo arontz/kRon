@@ -61,6 +61,7 @@ import app.kron.lyrics.recognition.AuddClient
 import app.kron.lyrics.recognition.AuddTokenStore
 import app.kron.lyrics.recognition.ListenController
 import app.kron.lyrics.recognition.Recognition
+import app.kron.lyrics.recognition.heardLogMessage
 import app.kron.lyrics.ui.MainActions
 import app.kron.lyrics.ui.MainApp
 import app.kron.lyrics.ui.MainState
@@ -103,12 +104,7 @@ class MainActivity : ComponentActivity() {
 
     /** A song the microphone recognized: show it like any playing song, and keep it in the Lyrics list. */
     private fun onSongHeard(match: Recognition.Match, captureStartElapsedMs: Long) {
-        val minutes = match.positionMs / 60_000
-        val seconds = match.positionMs / 1_000 % 60
-        activityLog.add(
-            LogKind.MEDIA,
-            "AudD recognized \"${match.title}\" by ${match.artist.ifBlank { "unknown artist" }}, clip started at $minutes:%02d".format(seconds),
-        )
+        activityLog.add(LogKind.MEDIA, heardLogMessage(match))
         NowPlayingStore.publishRecognized(recognizedSnapshot(match, captureStartElapsedMs))
         PlayHistory.record(PlayedSong(match.title, match.artist, durationMs = 0, playedAtMs = System.currentTimeMillis()))
     }
@@ -136,6 +132,7 @@ class MainActivity : ComponentActivity() {
                     val history by PlayHistory.songs.collectAsState()
                     val logEntries by activityLog.entries.collectAsState()
                     val listenState by listen.state.collectAsState()
+                    val heardSongActive by NowPlayingStore.heardSongActive.collectAsState()
                     val status = listenerStatus(listenerGranted, connected)
                     var reconnectHelp by remember { mutableStateOf(false) }
                     LaunchedEffect(status) {
@@ -168,6 +165,7 @@ class MainActivity : ComponentActivity() {
                             updateResult = updateResult,
                             listenState = listenState,
                             hasAuddToken = hasAuddToken,
+                            heardSongActive = heardSongActive,
                         ),
                         actions = MainActions(
                             onOpenListener = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },

@@ -24,6 +24,11 @@ object NowPlayingStore : NowPlayingSource {
     private val flow = MutableStateFlow(EMPTY)
     override val snapshot: StateFlow<PlaybackSnapshot> = flow
 
+    private val heardFlow = MutableStateFlow(false)
+
+    /** Whether a heard song is what is being shown, so it can always be dismissed, even after the screen is recreated. */
+    val heardSongActive: StateFlow<Boolean> = heardFlow
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var expiry: Job? = null
 
@@ -55,6 +60,8 @@ object NowPlayingStore : NowPlayingSource {
 
     @Synchronized
     private fun update() {
-        flow.value = activeSnapshot(session, recognized, SystemClock.elapsedRealtime())
+        val now = SystemClock.elapsedRealtime()
+        flow.value = activeSnapshot(session, recognized, now)
+        heardFlow.value = heardSongShown(session, recognized, now)
     }
 }

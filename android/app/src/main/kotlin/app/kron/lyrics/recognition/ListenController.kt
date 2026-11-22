@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Records from the microphone. Returns a WAV, or null when the microphone cannot be used. */
@@ -97,7 +98,11 @@ class ListenController(
         _state.value = ListenState.Listening(progress = 0f, level = 0f)
         job = scope.launch {
             val wav = recorder.record(LISTEN_MS) { elapsed, level ->
-                _state.value = ListenState.Listening((elapsed.toFloat() / LISTEN_MS).coerceIn(0f, 1f), level)
+                // This runs on the recorder's thread and can arrive just after cancel(): it may only update a state
+                // that is still Listening, or it would revive a cancelled recording and leave the button stuck busy.
+                _state.update {
+                    if (it is ListenState.Listening) ListenState.Listening((elapsed.toFloat() / LISTEN_MS).coerceIn(0f, 1f), level) else it
+                }
             }
             if (wav == null) {
                 _state.value = ListenState.MicUnavailable

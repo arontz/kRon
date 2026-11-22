@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kron.lyrics.media.ListenerStatus
 import app.kron.lyrics.recognition.ListenState
 import app.kron.lyrics.recognition.RecognitionError
 
@@ -62,16 +63,16 @@ fun ListenCard(state: MainState, actions: MainActions, onOpenSettings: () -> Uni
             ListenState.Identifying -> Text("Looking it up…", fontSize = 13.sp)
             is ListenState.Found -> {
                 Text("Found: ${s.match.title}" + if (s.match.artist.isNotBlank()) " by ${s.match.artist}" else "", fontWeight = FontWeight.SemiBold)
-                val showing = state.nowPlaying.track?.title == s.match.title
                 Text(
-                    if (showing) "Its lyrics show above. It's in your Lyrics list too."
-                    else "Music is playing on this phone, so the lyrics follow that. The song is in your Lyrics list.",
+                    when {
+                        !state.heardSongActive -> "Music is playing on this phone, so the lyrics follow that. The song is in your Lyrics list."
+                        state.listenerStatus != ListenerStatus.Connected ->
+                            "Turn on notification access to see its lyrics. The song is in your Lyrics list."
+                        else -> "Its lyrics show above. It's in your Lyrics list too."
+                    },
                     fontSize = 13.sp,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = actions.onListen) { Text("Listen again") }
-                    if (showing) OutlinedButton(onClick = actions.onStopShowing) { Text("Stop showing") }
-                }
+                OutlinedButton(onClick = actions.onListen) { Text("Listen again") }
             }
             ListenState.NoMatch -> {
                 Text("Couldn't recognize that. Move closer to the music and try again.", fontSize = 13.sp)
@@ -88,6 +89,11 @@ fun ListenCard(state: MainState, actions: MainActions, onOpenSettings: () -> Uni
                     if (s.error == RecognitionError.InvalidToken) OutlinedButton(onClick = onOpenSettings) { Text("Open Settings") }
                 }
             }
+        }
+        // A heard song stays on show for a few minutes, so it can always be dismissed, whatever the card says.
+        val busy = state.listenState is ListenState.Listening || state.listenState is ListenState.Identifying
+        if (state.heardSongActive && !busy) {
+            OutlinedButton(onClick = actions.onStopShowing) { Text("Stop showing the heard song") }
         }
     }
 }

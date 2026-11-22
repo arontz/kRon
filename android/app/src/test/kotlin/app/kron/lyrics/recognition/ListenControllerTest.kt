@@ -18,8 +18,10 @@ class ListenControllerTest {
         private val gate: CompletableDeferred<Unit>? = null,
     ) : MicRecorder {
         var calls = 0
+        var lastProgress: ((Long, Float) -> Unit)? = null
         override suspend fun record(durationMs: Long, onProgress: (Long, Float) -> Unit): ByteArray? {
             calls++
+            lastProgress = onProgress
             progress.forEach { onProgress(it.first, it.second) }
             gate?.await()
             return result
@@ -172,6 +174,22 @@ class ListenControllerTest {
         assertEquals(ListenState.Idle, e.state)
         assertEquals(0, e.recognizer.calls)
         assertEquals(emptyList<Any>(), e.matches)
+    }
+
+    @Test
+    fun aProgressUpdateThatArrivesAfterCancellingDoesNotRevive() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val e = Env(this, recorder = FakeRecorder(gate = gate))
+        e.controller.listen()
+        runCurrent()
+        e.controller.cancel()
+        e.recorder.lastProgress!!.invoke(8_000L, 0.4f) // the recorder's thread was mid-callback
+        assertEquals(ListenState.Idle, e.state)
+
+        e.recorder.result = ByteArray(10)
+        e.controller.listen() // and the button works again, it is not stuck as busy
+        runCurrent()
+        assertEquals(2, e.recorder.calls)
     }
 
     @Test

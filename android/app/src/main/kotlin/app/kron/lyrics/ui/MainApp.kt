@@ -50,6 +50,8 @@ class MainState(
     val updateResult: UpdateResult?,
     val listenState: ListenState,
     val hasAuddToken: Boolean,
+    /** A heard song is on show, which can be dismissed even if the Listen card was reset. */
+    val heardSongActive: Boolean,
 ) {
     val listenerGranted: Boolean get() = listenerStatus != ListenerStatus.NotGranted
 }

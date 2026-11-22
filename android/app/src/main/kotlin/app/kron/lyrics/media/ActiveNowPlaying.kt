@@ -13,12 +13,13 @@ data class RecognizedSong(val snapshot: PlaybackSnapshot, val expiresAtMs: Long)
  */
 const val RECOGNIZED_TTL_MS = 7 * 60_000L
 
+/** Whether the heard song is what is being shown: nothing plays on the phone and it has not expired. */
+fun heardSongShown(session: PlaybackSnapshot, recognized: RecognizedSong?, nowMs: Long): Boolean =
+    session.track == null && recognized != null && nowMs < recognized.expiresAtMs
+
 /** A song playing on this phone wins; otherwise a heard song that has not expired; otherwise what the session says. */
-fun activeSnapshot(session: PlaybackSnapshot, recognized: RecognizedSong?, nowMs: Long): PlaybackSnapshot = when {
-    session.track != null -> session
-    recognized != null && nowMs < recognized.expiresAtMs -> recognized.snapshot
-    else -> session
-}
+fun activeSnapshot(session: PlaybackSnapshot, recognized: RecognizedSong?, nowMs: Long): PlaybackSnapshot =
+    if (heardSongShown(session, recognized, nowMs)) recognized!!.snapshot else session
 
 /** Something playing on this phone replaces whatever was heard. */
 fun recognizedAfterSession(session: PlaybackSnapshot, recognized: RecognizedSong?): RecognizedSong? =
